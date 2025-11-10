@@ -1,4 +1,4 @@
-git{
+{
   "name": "todo",
   "version": "1.0.0",
   "description": "App de tareas con Expo, React Native y Firebase",
@@ -15,6 +15,7 @@ git{
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@react-navigation/bottom-tabs": "^7.8.2",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
     "expo": "~54.0.22",

@@ -8,7 +8,7 @@ import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, Keyboard
 import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, getServerTimestamp } from '../firebase';
 
-export default function TaskChatScreen({ route }) {
+export default function TaskChatScreen({ route, navigation }) {
   const { taskId, taskTitle } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -44,8 +44,12 @@ export default function TaskChatScreen({ route }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.select({ios:'padding', android:undefined})}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{taskTitle || 'Chat'}</Text>
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+          <Text style={styles.closeButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{taskTitle || 'Chat'}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <FlatList
@@ -83,17 +87,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FAFAFA'
   },
-  header: { 
-    paddingHorizontal: 24,
-    paddingTop: 64,
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#FAFAFA'
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3
   },
-  title: { 
-    fontSize: 38, 
-    fontWeight: '800',
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+    fontWeight: '600'
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1A1A1A',
-    letterSpacing: -1
+    letterSpacing: -0.3,
+    flex: 1,
+    textAlign: 'center'
   },
   messagesContainer: {
     padding: 20

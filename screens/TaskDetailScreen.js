@@ -29,8 +29,20 @@ export default function TaskDetailScreen({ route, navigation }) {
   }, [editingTask]);
 
   const onChangeDate = (event, selectedDate) => {
-    setShowPicker(Platform.OS === 'ios');
-    if (selectedDate) setDueAt(selectedDate);
+    // En Android, siempre ocultamos el picker después de seleccionar
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
+    }
+    
+    // Verificar que el evento exista y tenga un tipo
+    if (event && event.type === 'set' && selectedDate) {
+      setDueAt(selectedDate);
+    } else if (event && event.type === 'dismissed') {
+      setShowPicker(false);
+    } else if (!event && selectedDate) {
+      // Fallback para iOS
+      setDueAt(selectedDate);
+    }
   };
 
   const save = async () => {
@@ -48,8 +60,11 @@ export default function TaskDetailScreen({ route, navigation }) {
     try {
       const all = await loadTasks();
       const exists = all.findIndex(t => t.id === task.id);
-      if (exists >= 0) all[exists] = task;
-      else all.unshift(task);
+      if (exists >= 0) {
+        all[exists] = task;
+      } else {
+        all.unshift(task);
+      }
 
       // Si la tarea ya tenía notificaciones previas, cancelarlas
       if (editingTask) {
@@ -74,17 +89,35 @@ export default function TaskDetailScreen({ route, navigation }) {
         await notifyAssignment(task);
       }
 
+      // Actualizar la tarea con los IDs de notificación antes de guardar
+      if (exists >= 0) {
+        all[exists] = task;
+      } else {
+        all[0] = task; // Actualizar la primera posición con los IDs de notificación
+      }
+
       await saveTasks(all);
-      // Regresar a Home
-      navigation.navigate('Home');
+      
+      // Mostrar confirmación
+      Alert.alert('Éxito', editingTask ? 'Tarea actualizada correctamente' : 'Tarea creada correctamente', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     } catch (e) {
-      console.warn('Error guardando tarea', e);
-      Alert.alert('Error', 'No se pudo guardar la tarea');
+      console.error('Error guardando tarea:', e);
+      Alert.alert('Error', `No se pudo guardar la tarea: ${e.message}`);
     }
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+          <Text style={styles.closeButtonText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{editingTask ? 'Editar Tarea' : 'Nueva Tarea'}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.label}>TÍTULO</Text>
         <TextInput value={title} onChangeText={setTitle} placeholder="Título corto" placeholderTextColor="#C7C7CC" style={styles.input} />
@@ -170,6 +203,41 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#FAFAFA'
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#6E6E73',
+    fontWeight: '600'
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    letterSpacing: -0.3
   },
   scrollContent: {
     padding: 24

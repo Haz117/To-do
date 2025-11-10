@@ -170,4 +170,4 @@ firebase.js lee la configuración desde Constants.manifest.extra (inyectado por 
 
 Estas claves permiten acceder a tu proyecto Firebase.
 Evita compartir el archivo .env en público.
-Para producción, usa secrets del servidor o mecanismos seguros de configuración.
+Para producción, usa secrets del servidor o mecanismos seguros de configuración.git pus

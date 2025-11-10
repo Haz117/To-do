@@ -130,7 +130,7 @@ export default function ReportScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.heading}>Reporte</Text>
+        <Text style={styles.heading}>Reportes</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.subtitle}>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</Text>

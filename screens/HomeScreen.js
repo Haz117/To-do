@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import TaskItem from '../components/TaskItem';
 import FilterBar from '../components/FilterBar';
 import { loadTasks, saveTasks } from '../storage';
@@ -14,18 +15,15 @@ export default function HomeScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [filters, setFilters] = useState({ searchText: '', area: '', responsible: '', priority: '', overdue: false });
 
-  // Cargar tareas al iniciar
-  useEffect(() => {
-    (async () => {
-      const loaded = await loadTasks();
-      setTasks(loaded);
-    })();
-  }, []);
-
-  // Guardar tareas cada vez que cambian
-  useEffect(() => {
-    saveTasks(tasks);
-  }, [tasks]);
+  // Cargar tareas cada vez que la pantalla obtiene el foco
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const loaded = await loadTasks();
+        setTasks(loaded);
+      })();
+    }, [])
+  );
 
   // Navegar a pantalla para crear nueva tarea
   const goToCreate = () => navigation.navigate('TaskDetail');
@@ -66,21 +64,6 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.heading}>Tareas</Text>
         <TouchableOpacity style={styles.addButton} onPress={goToCreate}>
           <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('MyInbox')}>
-          <Text style={styles.tabText}>Bandeja</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('Kanban')}>
-          <Text style={styles.tabText}>Kanban</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, styles.tabActive]} onPress={() => {}}>
-          <Text style={[styles.tabText, styles.tabTextActive]}>Todas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('Report')}>
-          <Text style={styles.tabText}>Reporte</Text>
         </TouchableOpacity>
       </View>
 
@@ -142,43 +125,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '300',
     marginBottom: 2
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FAFAFA',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 8
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1
-  },
-  tabActive: {
-    backgroundColor: '#007AFF',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4
-  },
-  tabText: {
-    fontSize: 13,
-    color: '#8E8E93',
-    fontWeight: '500',
-    letterSpacing: 0.2
-  },
-  tabTextActive: {
-    color: '#fff',
-    fontWeight: '600'
   },
   listContent: {
     padding: 20,

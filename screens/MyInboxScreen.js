@@ -2,7 +2,7 @@
 // "Mi bandeja" - lista de tareas asignadas al usuario actual, ordenadas por fecha de vencimiento.
 // Acciones rápidas: marcar cerrada y posponer 1 día. Abre detalle y chat.
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import TaskItem from '../components/TaskItem';
 import { loadTasks, saveTasks } from '../storage';
@@ -71,6 +71,7 @@ export default function MyInboxScreen({ navigation }) {
 
   const openDetail = (task) => navigation.navigate('TaskDetail', { task });
   const openChat = (task) => navigation.navigate('TaskChat', { taskId: task.id, taskTitle: task.title });
+  const goToCreate = () => navigation.navigate('TaskDetail');
 
   const renderItem = ({ item }) => (
     <View style={{ marginBottom: 12 }}>
@@ -93,6 +94,9 @@ export default function MyInboxScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.heading}>Mi Bandeja</Text>
+        <TouchableOpacity style={styles.addButton} onPress={goToCreate}>
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.userSection}>
@@ -128,6 +132,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA'
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
     paddingHorizontal: 24,
     paddingTop: 64,
     paddingBottom: 16,
@@ -138,6 +145,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1A1A1A',
     letterSpacing: -1
+  },
+  addButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '300',
+    marginBottom: 2
   },
   userSection: {
     backgroundColor: '#fff',
