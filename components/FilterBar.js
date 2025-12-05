@@ -88,7 +88,7 @@ const FilterBar = memo(function FilterBar({ onFilterChange }) {
       {/* Filtros por área */}
       <View style={styles.section}>
         <Text style={styles.label}>Área:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+        <View style={styles.chipRow}>
           {areas.map(area => (
             <TouchableOpacity
               key={area}
@@ -98,13 +98,13 @@ const FilterBar = memo(function FilterBar({ onFilterChange }) {
               <Text style={[styles.chipText, selectedArea === area && styles.chipTextActive]}>{area}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {/* Filtros por prioridad y vencidas */}
       <View style={styles.section}>
         <Text style={styles.label}>Prioridad:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+        <View style={styles.chipRow}>
           {priorities.map(priority => (
             <TouchableOpacity
               key={priority}
@@ -122,7 +122,7 @@ const FilterBar = memo(function FilterBar({ onFilterChange }) {
           >
             <Text style={[styles.chipText, showOverdue && styles.chipTextActive]}>Vencidas</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </View>
 
       {/* Botón limpiar */}
@@ -168,15 +168,18 @@ const styles = StyleSheet.create({
   chipRow: { 
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8
+    gap: 8,
+    marginRight: 8
   },
   chip: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
+    paddingHorizontal: 12, 
+    paddingVertical: 7, 
     backgroundColor: '#FFFAF0', 
-    borderRadius: 20, 
+    borderRadius: 18, 
     borderWidth: 1.5,
-    borderColor: '#F5DEB3'
+    borderColor: '#F5DEB3',
+    marginBottom: 8,
+    marginRight: 4
   },
   chipActive: { 
     backgroundColor: '#8B0000',
@@ -192,10 +195,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000'
   },
   chipText: { 
-    fontSize: 14, 
+    fontSize: 13, 
     color: '#1A1A1A', 
     fontWeight: '600',
-    letterSpacing: 0.2
+    letterSpacing: 0.1
   },
   chipTextActive: { 
     color: '#fff', 

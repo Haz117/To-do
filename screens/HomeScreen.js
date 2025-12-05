@@ -1,44 +1,100 @@
 // screens/HomeScreen.js
 // Lista simple de tareas, añade tareas de ejemplo y persiste con AsyncStorage.
 // Usa navigation para ir a detalle y chat.
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, FlatList, StyleSheet, TextInput, Button, Alert, TouchableOpacity, RefreshControl, ScrollView, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import TaskItem from '../components/TaskItem';
 import FilterBar from '../components/FilterBar';
-import { saveTasks } from '../storage';
+import SkeletonLoader from '../components/SkeletonLoader';
+import Toast from '../components/Toast';
+import ConnectionIndicator from '../components/ConnectionIndicator';
 import { subscribeToTasks, deleteTask as deleteTaskFirebase, updateTask } from '../services/tasks';
 import * as Notifications from 'expo-notifications';
+import { getCurrentSession } from '../services/authFirestore';
 
 export default function HomeScreen({ navigation }) {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
   const [filters, setFilters] = useState({ searchText: '', area: '', responsible: '', priority: '', overdue: false });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+
+  // Animation
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+
+  // Cargar usuario actual
+  useEffect(() => {
+    loadCurrentUser();
+  }, []);
+
+  const loadCurrentUser = useCallback(async () => {
+    const result = await getCurrentSession();
+    if (result.success) {
+      setCurrentUser(result.session);
+    }
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    // Las tareas se actualizan automáticamente por el listener
+    // Solo simulamos el tiempo de refresco
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
 
   // Suscribirse a cambios en tiempo real de Firebase
   useEffect(() => {
     const unsubscribe = subscribeToTasks((updatedTasks) => {
       setTasks(updatedTasks);
+      setIsLoading(false);
+      
+      // Animar entrada de la lista
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
     });
 
     // Limpiar suscripción al desmontar
     return () => unsubscribe();
-  }, []);
+  }, [fadeAnim]);
 
-  // Navegar a pantalla para crear nueva tarea
-  const goToCreate = () => navigation.navigate('TaskDetail');
+  // Navegar a pantalla para crear nueva tarea (solo admin y jefe)
+  const goToCreate = useCallback(() => {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'jefe')) {
+      navigation.navigate('TaskDetail');
+    } else {
+      Alert.alert('Sin permisos', 'Solo administradores y jefes pueden crear tareas');
+    }
+  }, [currentUser, navigation]);
 
-  const openDetail = (task) => {
+  const openDetail = useCallback((task) => {
     navigation.navigate('TaskDetail', { task });
-  };
+  }, [navigation]);
 
-  const openChat = (task) => {
+  const openChat = useCallback((task) => {
     navigation.navigate('TaskChat', { taskId: task.id, taskTitle: task.title });
-  };
+  }, [navigation]);
 
-  const deleteTask = async (taskId) => {
+  const deleteTask = useCallback(async (taskId) => {
+    // Solo admin puede eliminar tareas
+    if (!currentUser || currentUser.role !== 'admin') {
+      Alert.alert('Sin permisos', 'Solo los administradores pueden eliminar tareas');
+      return;
+    }
+
     Alert.alert(
       'Eliminar tarea',
       '¿Estás seguro de que quieres eliminar esta tarea?',
@@ -48,58 +104,104 @@ export default function HomeScreen({ navigation }) {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            await deleteTaskFirebase(taskId);
+            try {
+              await deleteTaskFirebase(taskId);
+              
+              // Mostrar toast de confirmación
+              setToastMessage('Tarea eliminada exitosamente');
+              setToastType('success');
+              setToastVisible(true);
+            } catch (error) {
+              setToastMessage(`Error al eliminar: ${error.message}`);
+              setToastType('error');
+              setToastVisible(true);
+            }
             // La actualización del estado se hace automáticamente por el listener
           }
         }
       ]
     );
-  };
+  }, [currentUser]);
 
-  const toggleComplete = async (task) => {
-    const newStatus = task.status === 'cerrada' ? 'pendiente' : 'cerrada';
-    await updateTask(task.id, { status: newStatus });
+  const toggleComplete = useCallback(async (task) => {
+    try {
+      const newStatus = task.status === 'cerrada' ? 'pendiente' : 'cerrada';
+      await updateTask(task.id, { status: newStatus });
+      
+      // Mostrar toast de confirmación
+      setToastMessage(newStatus === 'cerrada' ? 'Tarea marcada como completada' : 'Tarea reabierta');
+      setToastType('success');
+      setToastVisible(true);
+    } catch (error) {
+      setToastMessage(`Error al actualizar: ${error.message}`);
+      setToastType('error');
+      setToastVisible(true);
+    }
     // La actualización del estado se hace automáticamente por el listener
-  };
+  }, []);
 
-  // Aplicar filtros
-  const filteredTasks = tasks.filter(task => {
-    // Búsqueda por título
-    if (filters.searchText && !task.title.toLowerCase().includes(filters.searchText.toLowerCase())) return false;
-    // Filtro por área
-    if (filters.area && task.area !== filters.area) return false;
-    // Filtro por responsable
-    if (filters.responsible && task.assignedTo !== filters.responsible) return false;
-    // Filtro por prioridad
-    if (filters.priority && task.priority !== filters.priority) return false;
-    // Filtro por vencidas
-    if (filters.overdue && task.dueAt >= Date.now()) return false;
-    return true;
-  });
+  // Aplicar filtros con memoización
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      // NOTA: El filtrado por rol ya se hace en el servidor (tasks.js subscribeToTasks)
+      // Aquí solo aplicamos filtros adicionales de búsqueda
+      
+      // Búsqueda por título
+      if (filters.searchText && !task.title.toLowerCase().includes(filters.searchText.toLowerCase())) return false;
+      // Filtro por área
+      if (filters.area && task.area !== filters.area) return false;
+      // Filtro por responsable
+      if (filters.responsible && task.assignedTo !== filters.responsible) return false;
+      // Filtro por prioridad
+      if (filters.priority && task.priority !== filters.priority) return false;
+      // Filtro por vencidas
+      if (filters.overdue && task.dueAt >= Date.now()) return false;
+      return true;
+    });
+  }, [tasks, filters]);
 
-  // Estadísticas Bento
-  const todayTasks = filteredTasks.filter(t => {
-    const today = new Date().setHours(0,0,0,0);
-    const dueDate = t.dueAt ? new Date(t.dueAt).setHours(0,0,0,0) : null;
-    return dueDate === today;
-  });
+  // Estadísticas Bento con memoización
+  const statistics = useMemo(() => {
+    const todayTasks = filteredTasks.filter(t => {
+      const today = new Date().setHours(0,0,0,0);
+      const dueDate = t.dueAt ? new Date(t.dueAt).setHours(0,0,0,0) : null;
+      return dueDate === today;
+    });
 
-  const highPriorityTasks = filteredTasks.filter(t => t.priority === 'alta' && t.status !== 'cerrada');
-  const overdueTasks = filteredTasks.filter(t => t.dueAt && t.dueAt < Date.now() && t.status !== 'cerrada');
-  const myTasks = filteredTasks.filter(t => t.assignedTo && t.status !== 'cerrada');
-  
-  const tasksByArea = filteredTasks.reduce((acc, task) => {
-    const area = task.area || 'Sin área';
-    acc[area] = (acc[area] || 0) + 1;
-    return acc;
-  }, {});
+    const highPriorityTasks = filteredTasks.filter(t => t.priority === 'alta' && t.status !== 'cerrada');
+    const overdueTasks = filteredTasks.filter(t => t.dueAt && t.dueAt < Date.now() && t.status !== 'cerrada');
+    const myTasks = filteredTasks.filter(t => t.assignedTo && t.status !== 'cerrada');
+    
+    const tasksByArea = filteredTasks.reduce((acc, task) => {
+      const area = task.area || 'Sin área';
+      acc[area] = (acc[area] || 0) + 1;
+      return acc;
+    }, {});
 
-  const topAreas = Object.entries(tasksByArea)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+    const topAreas = Object.entries(tasksByArea)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+      
+    return {
+      todayTasks,
+      highPriorityTasks,
+      overdueTasks,
+      myTasks,
+      topAreas
+    };
+  }, [filteredTasks]);
+
+  const { todayTasks, highPriorityTasks, overdueTasks, myTasks, topAreas } = statistics;
+
+  // Memoizar handler de filtros
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+  }, []);
 
   return (
     <View style={styles.container}>
+      <ConnectionIndicator />
+      
       <LinearGradient
         colors={['#8B0000', '#6B0000']}
         start={{ x: 0, y: 0 }}
@@ -114,25 +216,104 @@ export default function HomeScreen({ navigation }) {
             </View>
             <Text style={styles.heading}>Mis Tareas</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={goToCreate}>
-            <LinearGradient
-              colors={['#FFFFFF', '#FFF8DC']}
-              style={styles.addButtonGradient}
-            >
-              <Ionicons name="add" size={36} color="#DAA520" />
-            </LinearGradient>
-          </TouchableOpacity>
+          {currentUser && (currentUser.role === 'admin' || currentUser.role === 'jefe') && (
+            <TouchableOpacity style={styles.addButton} onPress={goToCreate}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FFF8DC']}
+                style={styles.addButtonGradient}
+              >
+                <Ionicons name="add" size={36} color="#DAA520" />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
 
-      <FilterBar onFilterChange={setFilters} />
+      {/* Filtros Rápidos con Chips */}
+      <View style={styles.quickFilters}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickFiltersContent}>
+          <TouchableOpacity 
+            style={[styles.filterChip, !filters.searchText && !filters.area && !filters.priority && !filters.overdue && styles.filterChipActive]}
+            onPress={() => setFilters({ searchText: '', area: '', responsible: '', priority: '', overdue: false })}
+          >
+            <Ionicons name="apps" size={16} color={!filters.searchText && !filters.area && !filters.priority && !filters.overdue ? "#FFFFFF" : "#8B0000"} />
+            <Text style={[styles.filterChipText, !filters.searchText && !filters.area && !filters.priority && !filters.overdue && styles.filterChipTextActive]}>
+              Todas
+            </Text>
+          </TouchableOpacity>
 
-      <FlatList
-        data={filteredTasks}
-        keyExtractor={(i) => i.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+          <TouchableOpacity 
+            style={[styles.filterChip, filters.overdue && styles.filterChipActive]}
+            onPress={() => setFilters({ ...filters, overdue: !filters.overdue })}
+          >
+            <Ionicons name="time" size={16} color={filters.overdue ? "#FFFFFF" : "#8B0000"} />
+            <Text style={[styles.filterChipText, filters.overdue && styles.filterChipTextActive]}>
+              Vencidas
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip, filters.priority === 'alta' && styles.filterChipActive]}
+            onPress={() => setFilters({ ...filters, priority: filters.priority === 'alta' ? '' : 'alta' })}
+          >
+            <Ionicons name="warning" size={16} color={filters.priority === 'alta' ? "#FFFFFF" : "#FF9500"} />
+            <Text style={[styles.filterChipText, filters.priority === 'alta' && styles.filterChipTextActive]}>
+              Urgente
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip]}
+            onPress={() => {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              const todayStart = today.getTime();
+              const todayEnd = todayStart + 24 * 3600 * 1000;
+              setFilters({ ...filters, searchText: 'HOY_SPECIAL_FILTER' });
+            }}
+          >
+            <Ionicons name="today" size={16} color="#34C759" />
+            <Text style={styles.filterChipText}>
+              Hoy
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.filterChip]}
+            onPress={() => {
+              const weekEnd = new Date();
+              weekEnd.setDate(weekEnd.getDate() + 7);
+              setFilters({ ...filters, searchText: 'WEEK_SPECIAL_FILTER' });
+            }}
+          >
+            <Ionicons name="calendar-outline" size={16} color="#5856D6" />
+            <Text style={styles.filterChipText}>
+              Esta semana
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      <FilterBar onFilterChange={handleFilterChange} />
+
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <FlatList
+          data={filteredTasks}
+          keyExtractor={(i) => i.id}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#8B0000"
+              colors={['#8B0000']}
+            />
+          }
+          contentContainerStyle={styles.listContent}
         ListHeaderComponent={
+          isLoading ? (
+            <SkeletonLoader type="bento" />
+          ) : (
           <View style={styles.bentoGrid}>
             {/* Fila 1: Bloque grande (Hoy) + Bloque mediano (Vencidas) */}
             <View style={styles.bentoRow}>
@@ -217,6 +398,7 @@ export default function HomeScreen({ navigation }) {
 
             <Text style={styles.sectionTitle}>Todas las Tareas</Text>
           </View>
+          )
         }
         renderItem={({ item }) => (
           <TaskItem 
@@ -233,6 +415,14 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.emptySubtext}>Toca el botón + para crear una nueva tarea</Text>
           </View>
         }
+      />
+      </Animated.View>
+      
+      <Toast 
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
       />
     </View>
   );
@@ -279,20 +469,22 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5
   },
   addButton: {
-    borderRadius: 28,
+    borderRadius: 30,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8
+    shadowColor: '#DAA520',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12
   },
   addButtonGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)'
   },
   listContent: {
     padding: 20,
@@ -395,61 +587,73 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   bentoTitleLarge: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
     marginBottom: 8,
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   bentoTitleSmall: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
     marginBottom: 8,
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   bentoNumberLarge: {
-    fontSize: 56,
+    fontSize: 64,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -3,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4
+    textShadowRadius: 6
   },
   bentoNumberMedium: {
-    fontSize: 48,
+    fontSize: 52,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -2.5,
-    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4
+    textShadowRadius: 6
   },
   bentoNumberSmall: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -2,
-    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4
+    textShadowRadius: 6
   },
   bentoSubtext: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.95)',
-    fontWeight: '600',
-    letterSpacing: 0.3
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   bentoLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.95)',
-    fontWeight: '700',
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.8
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   areasContainer: {
     flexDirection: 'row',
@@ -499,5 +703,50 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     marginBottom: 16,
     marginTop: 12
+  },
+  quickFilters: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA'
+  },
+  quickFiltersContent: {
+    paddingRight: 20
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#F5DEB3',
+    marginRight: 10,
+    gap: 8,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1
+  },
+  filterChipActive: {
+    backgroundColor: '#8B0000',
+    borderColor: '#8B0000',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    transform: [{ scale: 1.02 }]
+  },
+  filterChipText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#8B0000',
+    letterSpacing: 0.2
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800'
   }
 });

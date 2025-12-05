@@ -55,22 +55,15 @@ export async function ensurePermissions() {
   }
 }
 
-// Programa una notificación antes de la fecha límite
+// Programa una notificación antes de la fecha límite (optimizado)
 // Devuelve el id de la notificación programada o null si no se programó.
 export async function scheduleNotificationForTask(task, options = { minutesBefore: 10 }) {
   try {
-    const granted = await ensurePermissions();
-    if (!granted) {
-      console.log('No se pueden programar notificaciones sin permisos');
-      return null;
-    }
-
     const due = typeof task.dueAt === 'number' ? new Date(task.dueAt) : new Date(task.dueAt);
     const triggerDate = new Date(due.getTime() - options.minutesBefore * 60 * 1000);
 
     // Si el trigger ya pasó, no programamos
     if (triggerDate <= new Date()) {
-      console.log('La fecha de notificación ya pasó, no se programa');
       return null;
     }
 
@@ -85,12 +78,11 @@ export async function scheduleNotificationForTask(task, options = { minutesBefor
         },
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
-        color: '#667eea',
+        color: '#8B0000',
       },
       trigger: triggerDate
     });
 
-    console.log(`Notificación programada con ID: ${id} para ${triggerDate.toLocaleString()}`);
     return id;
   } catch (e) {
     console.error('Error programando notificación:', e);
@@ -153,54 +145,25 @@ export async function scheduleDailyReminders(task, maxReminders = 3) {
   }
 }
 
-// Notificación al asignar tarea (Local + Push)
+// Notificación al asignar tarea (Local optimizada)
 export async function notifyAssignment(task) {
   try {
-    // 1. Enviar notificación local (inmediata)
-    const granted = await ensurePermissions();
-    let localNotifId = null;
-    
-    if (granted) {
-      localNotifId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '📋 Nueva Tarea Asignada',
-          body: `Te asignaron: "${task.title}" - Vence: ${new Date(task.dueAt).toLocaleDateString()}`,
-          data: { 
-            taskId: task.id, 
-            type: 'assignment',
-            taskTitle: task.title,
-            assignedTo: task.assignedTo
-          },
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          color: '#007AFF',
+    const localNotifId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '📋 Nueva Tarea Asignada',
+        body: `Te asignaron: "${task.title}" - Vence: ${new Date(task.dueAt).toLocaleDateString()}`,
+        data: { 
+          taskId: task.id, 
+          type: 'assignment',
+          taskTitle: task.title,
+          assignedTo: task.assignedTo
         },
-        trigger: null // Notificación inmediata
-      });
-
-      console.log(`✅ Notificación local de asignación enviada con ID: ${localNotifId}`);
-    }
-
-    // 2. Buscar UID del usuario asignado y enviar push notification
-    if (task.assignedTo) {
-      try {
-        // Buscar usuario por nombre en la colección de usuarios (si usas nombres)
-        // O si assignedTo ya es un UID, usarlo directamente
-        
-        // Por ahora, si assignedTo contiene el UID del usuario, enviar push
-        // En tu caso actual assignedTo es un string con nombres, necesitarás adaptar esto
-        
-        // Ejemplo: si tuvieras una función para convertir nombre a UID
-        // const userUID = await getUserUIDByName(task.assignedTo);
-        // if (userUID) {
-        //   await notifyTaskAssigned(userUID, task);
-        // }
-        
-        console.log('ℹ️ Push notification pendiente de configurar: necesitas mapear nombres a UIDs');
-      } catch (error) {
-        console.error('❌ Error enviando push notification:', error);
-      }
-    }
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        color: '#8B0000',
+      },
+      trigger: null // Notificación inmediata
+    });
 
     return localNotifId;
   } catch (e) {

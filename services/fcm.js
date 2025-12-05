@@ -5,7 +5,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { collection, doc, setDoc, getDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getCurrentUserUID } from './auth';
+import { getCurrentSession } from './authFirestore';
 
 const TOKENS_COLLECTION = 'fcmTokens';
 
@@ -96,11 +96,13 @@ export async function registerDeviceToken(token) {
     return false;
   }
 
-  const userUID = getCurrentUserUID();
-  if (!userUID) {
+  const sessionResult = await getCurrentSession();
+  if (!sessionResult.success) {
     console.warn('⚠️ No hay usuario autenticado');
     return false;
   }
+  
+  const userUID = sessionResult.session.userId;
 
   try {
     const tokenDoc = doc(db, TOKENS_COLLECTION, token);

@@ -1,6 +1,6 @@
 // firebase.js
 // Configuración mínima para Firebase v9 modular + helper para Firestore
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, serverTimestamp } from 'firebase/firestore';
 import Constants from 'expo-constants';
 
@@ -28,11 +28,14 @@ const firebaseConfigResolved = {
   measurementId: extra.FIREBASE_MEASUREMENT_ID || firebaseConfig.measurementId,
 };
 
-const app = initializeApp(firebaseConfigResolved);
-export const db = getFirestore(app);
+// Inicializar Firebase App (solo si no existe)
+const app = getApps().length === 0 ? initializeApp(firebaseConfigResolved) : getApps()[0];
 
-// Exportar app para uso en otros servicios (auth, storage, etc.)
-export { app };
+// Inicializar Firestore
+const db = getFirestore(app);
+
+// Exportar solo app y db (auth se crea bajo demanda en services/auth.js)
+export { app, db };
 
 // Helper: timestamp de servidor (útil para mensajes)
 export const getServerTimestamp = () => serverTimestamp();

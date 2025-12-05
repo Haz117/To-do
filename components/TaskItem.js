@@ -88,9 +88,10 @@ const TaskItem = memo(function TaskItem({ task, onPress, onDelete, onToggleCompl
     <Swipeable
       renderRightActions={renderRightActions}
       renderLeftActions={renderLeftActions}
-      friction={2}
-      rightThreshold={40}
-      leftThreshold={40}
+      friction={1.5}
+      overshootFriction={8}
+      rightThreshold={30}
+      leftThreshold={30}
     >
       <TouchableOpacity 
         onPress={() => onPress && onPress(task)} 
@@ -101,10 +102,14 @@ const TaskItem = memo(function TaskItem({ task, onPress, onDelete, onToggleCompl
         activeOpacity={0.7}
       >
         <View style={styles.row}>
-          <Text style={[
-            styles.title,
-            task.status === 'cerrada' && styles.titleCompleted
-          ]}>
+          <Text 
+            style={[
+              styles.title,
+              task.status === 'cerrada' && styles.titleCompleted
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {task.title}
           </Text>
           <Text style={[styles.badge, remaining <= 0 ? styles.badgeExpired : null]}>
@@ -134,46 +139,56 @@ export default TaskItem;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFAF0',
-    marginBottom: 12,
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 14,
+    borderRadius: 18,
+    padding: 20,
     shadowColor: '#8B0000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
+    borderWidth: 2,
     borderColor: '#F5DEB3'
   },
   row: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'flex-start',
-    marginBottom: 12
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8
   },
   title: { 
-    fontSize: 18, 
-    fontWeight: '700', 
+    fontSize: 17, 
+    fontWeight: '800', 
     color: '#1A1A1A', 
     flex: 1, 
-    marginRight: 12,
-    letterSpacing: -0.5,
-    lineHeight: 24
+    marginRight: 8,
+    letterSpacing: -0.4,
+    lineHeight: 24,
+    minWidth: '60%'
   },
   badge: {
-    backgroundColor: '#DAA520',
-    color: '#fff',
+    backgroundColor: '#5856D6',
+    color: '#FFFFFF',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 12,
-    fontWeight: '700',
-    minWidth: 60,
-    textAlign: 'center'
+    fontWeight: '900',
+    minWidth: 70,
+    maxWidth: 100,
+    textAlign: 'center',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+    letterSpacing: -0.2
   },
   badgeExpired: { 
-    backgroundColor: '#8B0000'
+    backgroundColor: '#FF3B30'
   },
   metaRow: { 
     flexDirection: 'row', 
@@ -183,15 +198,17 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   meta: { 
-    color: '#6E6E73', 
+    color: '#1A1A1A', 
     fontSize: 14, 
-    fontWeight: '500',
-    letterSpacing: 0.1
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    flex: 1,
+    marginRight: 8
   },
   metaSmall: { 
-    color: '#AEAEB2', 
-    fontSize: 13,
-    fontWeight: '500'
+    color: '#6E6E73', 
+    fontSize: 14,
+    fontWeight: '600'
   },
   priorityRow: { 
     flexDirection: 'row', 
@@ -200,15 +217,16 @@ const styles = StyleSheet.create({
     gap: 10
   },
   priorityBadge: { 
-    fontSize: 11, 
+    fontSize: 10, 
     fontWeight: '700', 
-    paddingHorizontal: 10, 
-    paddingVertical: 5, 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
     borderRadius: 6, 
     backgroundColor: '#F2F2F7', 
     color: '#6E6E73',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
+    alignSelf: 'flex-start'
   },
   priorityHigh: { 
     backgroundColor: '#FFE4E1', 

@@ -15,36 +15,67 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { loadTasks as loadLocal, saveTasks as saveLocal } from '../storage';
-import { getCurrentUserUID, getCurrentUserName } from './auth';
-import { getUserProfile } from './roles';
+import { getCurrentSession } from './authFirestore';
 
 const COLLECTION_NAME = 'tasks';
+
+// Cache en memoria para reducir lecturas
+let cachedTasks = [];
+let lastFetchTime = 0;
+const CACHE_DURATION = 30000; // 30 segundos
 
 /**
  * Suscribirse a cambios en tiempo real de las tareas del usuario autenticado
  * @param {Function} callback - Función que recibe el array de tareas actualizado
  * @returns {Function} Función para cancelar la suscripción
  */
-export function subscribeToTasks(callback) {
+export async function subscribeToTasks(callback) {
   try {
-    const currentUserUID = getCurrentUserUID();
-    
-    // Crear query base
+    // Obtener sesión del usuario actual
+    const sessionResult = await getCurrentSession();
+    if (!sessionResult.success) {
+      console.warn('Usuario no autenticado, no se pueden cargar tareas');
+      callback([]);
+      return () => {};
+    }
+
+    const userRole = sessionResult.session.role;
+    const userEmail = sessionResult.session.email;
+    const userDepartment = sessionResult.session.department;
+
+    // Enviar cache inmediatamente para UX rápido
+    if (cachedTasks.length > 0 && Date.now() - lastFetchTime < CACHE_DURATION) {
+      callback(cachedTasks);
+    }
+
     let tasksQuery;
-    
-    if (currentUserUID) {
-      // Filtrar tareas donde el usuario tiene acceso
+
+    // Construir query según el rol del usuario
+    if (userRole === 'admin') {
+      // Admin: Ver todas las tareas
       tasksQuery = query(
         collection(db, COLLECTION_NAME),
-        where('userAccess', 'array-contains', currentUserUID),
+        orderBy('createdAt', 'desc')
+      );
+    } else if (userRole === 'jefe') {
+      // Jefe: Solo tareas de su departamento/área
+      tasksQuery = query(
+        collection(db, COLLECTION_NAME),
+        where('area', '==', userDepartment),
+        orderBy('createdAt', 'desc')
+      );
+    } else if (userRole === 'operativo') {
+      // Operativo: Solo tareas asignadas a él
+      tasksQuery = query(
+        collection(db, COLLECTION_NAME),
+        where('assignedTo', '==', userEmail),
         orderBy('createdAt', 'desc')
       );
     } else {
-      // Sin usuario autenticado, mostrar todas (compatibilidad hacia atrás)
-      tasksQuery = query(
-        collection(db, COLLECTION_NAME),
-        orderBy('createdAt', 'desc')
-      );
+      // Sin rol definido: sin acceso
+      console.warn('Usuario sin rol definido');
+      callback([]);
+      return () => {};
     }
 
     // Listener en tiempo real
@@ -60,7 +91,11 @@ export function subscribeToTasks(callback) {
           dueAt: doc.data().dueAt?.toMillis() || Date.now()
         }));
         
-        // Guardar copia local como backup
+        // Actualizar cache
+        cachedTasks = tasks;
+        lastFetchTime = Date.now();
+        
+        // Guardar copia local como backup (sin bloquear)
         saveLocal(tasks).catch(err => console.warn('Error guardando backup local:', err));
         
         callback(tasks);
@@ -68,7 +103,10 @@ export function subscribeToTasks(callback) {
       (error) => {
         console.error('Error en subscripción de Firebase:', error);
         // Fallback: cargar desde AsyncStorage si Firebase falla
-        loadLocal().then(tasks => callback(tasks));
+        loadLocal().then(tasks => {
+          cachedTasks = tasks;
+          callback(tasks);
+        });
       }
     );
 
@@ -76,7 +114,10 @@ export function subscribeToTasks(callback) {
   } catch (error) {
     console.error('Error configurando subscripción:', error);
     // Fallback: cargar desde AsyncStorage
-    loadLocal().then(tasks => callback(tasks));
+    loadLocal().then(tasks => {
+      cachedTasks = tasks;
+      callback(tasks);
+    });
     return () => {}; // Retornar función vacía
   }
 }
@@ -87,26 +128,34 @@ export function subscribeToTasks(callback) {
  * @returns {Promise<string>} ID de la tarea creada
  */
 export async function createTask(task) {
+  const tempId = `temp_${Date.now()}`;
+  
   try {
-    const currentUserUID = getCurrentUserUID();
-    const currentUserName = getCurrentUserName();
-    const userProfile = await getUserProfile();
+    // Obtener información del usuario actual
+    const sessionResult = await getCurrentSession();
+    const currentUserUID = sessionResult.success ? sessionResult.session.userId : 'anonymous';
+    const currentUserName = sessionResult.success ? sessionResult.session.displayName : 'Usuario Anónimo';
+
+    // OPTIMISTIC UPDATE: Actualizar cache inmediatamente
+    const optimisticTask = {
+      ...task,
+      id: tempId,
+      createdBy: currentUserUID,
+      createdByName: currentUserName,
+      department: task.department || '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      dueAt: task.dueAt,
+      _optimistic: true
+    };
     
-    // Array de usuarios con acceso (creador + asignados)
-    const userAccess = [currentUserUID];
-    
-    // Si tiene assignedTo, agregar esos usuarios también
-    if (task.assignedTo && Array.isArray(task.assignedTo)) {
-      // Nota: En el futuro, aquí deberíamos convertir nombres a UIDs
-      // Por ahora mantenemos compatibilidad con el sistema de nombres
-    }
-    
+    cachedTasks = [optimisticTask, ...cachedTasks];
+
     const taskData = {
       ...task,
-      createdBy: currentUserUID || 'anonymous',
-      createdByName: currentUserName || 'Usuario Anónimo',
-      department: task.department || userProfile?.department || '',
-      userAccess: userAccess,
+      createdBy: currentUserUID,
+      createdByName: currentUserName,
+      department: task.department || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       dueAt: Timestamp.fromMillis(task.dueAt)
@@ -114,15 +163,26 @@ export async function createTask(task) {
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), taskData);
     console.log('✅ Tarea creada en Firebase:', docRef.id);
+    
+    // Reemplazar tarea optimista con la real
+    cachedTasks = cachedTasks.filter(t => t.id !== tempId);
+    
     return docRef.id;
   } catch (error) {
     console.error('❌ Error creando tarea en Firebase:', error);
-    // Fallback: guardar localmente
-    const allTasks = await loadLocal();
-    const newTask = { ...task, id: String(Date.now()) };
-    allTasks.unshift(newTask);
-    await saveLocal(allTasks);
-    return newTask.id;
+    // Remover tarea optimista en caso de error
+    cachedTasks = cachedTasks.filter(t => t.id !== tempId);
+    
+    // Lanzar error con mensaje específico
+    if (error.code === 'permission-denied') {
+      throw new Error('No tienes permisos para crear tareas');
+    } else if (error.code === 'unavailable') {
+      throw new Error('Sin conexión. Verifica tu red e intenta nuevamente');
+    } else if (error.code === 'resource-exhausted') {
+      throw new Error('Límite de operaciones excedido. Intenta más tarde');
+    } else {
+      throw new Error(`Error al crear tarea: ${error.message}`);
+    }
   }
 }
 
@@ -133,6 +193,19 @@ export async function createTask(task) {
  * @returns {Promise<void>}
  */
 export async function updateTask(taskId, updates) {
+  // OPTIMISTIC UPDATE: Actualizar cache inmediatamente
+  const taskIndex = cachedTasks.findIndex(t => t.id === taskId);
+  const previousTask = taskIndex >= 0 ? { ...cachedTasks[taskIndex] } : null;
+  
+  if (taskIndex >= 0) {
+    cachedTasks[taskIndex] = {
+      ...cachedTasks[taskIndex],
+      ...updates,
+      updatedAt: Date.now(),
+      _optimistic: true
+    };
+  }
+  
   try {
     const taskRef = doc(db, COLLECTION_NAME, taskId);
     const updateData = {
@@ -147,14 +220,28 @@ export async function updateTask(taskId, updates) {
 
     await updateDoc(taskRef, updateData);
     console.log('✅ Tarea actualizada en Firebase:', taskId);
+    
+    // Remover flag optimista
+    if (taskIndex >= 0) {
+      delete cachedTasks[taskIndex]._optimistic;
+    }
   } catch (error) {
     console.error('❌ Error actualizando tarea en Firebase:', error);
-    // Fallback: actualizar localmente
-    const allTasks = await loadLocal();
-    const index = allTasks.findIndex(t => t.id === taskId);
-    if (index >= 0) {
-      allTasks[index] = { ...allTasks[index], ...updates, updatedAt: Date.now() };
-      await saveLocal(allTasks);
+    
+    // ROLLBACK: Restaurar estado anterior
+    if (previousTask && taskIndex >= 0) {
+      cachedTasks[taskIndex] = previousTask;
+    }
+    
+    // Lanzar error con mensaje específico
+    if (error.code === 'permission-denied') {
+      throw new Error('No tienes permisos para modificar esta tarea');
+    } else if (error.code === 'not-found') {
+      throw new Error('La tarea no existe o fue eliminada');
+    } else if (error.code === 'unavailable') {
+      throw new Error('Sin conexión. Verifica tu red e intenta nuevamente');
+    } else {
+      throw new Error(`Error al actualizar: ${error.message}`);
     }
   }
 }
@@ -171,10 +258,17 @@ export async function deleteTask(taskId) {
     console.log('✅ Tarea eliminada de Firebase:', taskId);
   } catch (error) {
     console.error('❌ Error eliminando tarea de Firebase:', error);
-    // Fallback: eliminar localmente
-    const allTasks = await loadLocal();
-    const filtered = allTasks.filter(t => t.id !== taskId);
-    await saveLocal(filtered);
+    
+    // Lanzar error con mensaje específico
+    if (error.code === 'permission-denied') {
+      throw new Error('No tienes permisos para eliminar esta tarea');
+    } else if (error.code === 'not-found') {
+      throw new Error('La tarea no existe o ya fue eliminada');
+    } else if (error.code === 'unavailable') {
+      throw new Error('Sin conexión. Verifica tu red e intenta nuevamente');
+    } else {
+      throw new Error(`Error al eliminar: ${error.message}`);
+    }
   }
 }
 

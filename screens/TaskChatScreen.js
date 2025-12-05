@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, addDoc, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db, getServerTimestamp } from '../firebase';
-import { getCurrentUserUID, getCurrentUserName } from '../services/auth';
+import { getCurrentSession } from '../services/authFirestore';
 import { notifyNewComment } from '../services/fcm';
 
 export default function TaskChatScreen({ route, navigation }) {
@@ -17,15 +17,59 @@ export default function TaskChatScreen({ route, navigation }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [currentUser, setCurrentUser] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [taskData, setTaskData] = useState(null);
   const flatRef = useRef();
 
-  // Cargar usuario actual desde Firebase Auth
+  // Cargar usuario actual y verificar acceso a la tarea
   useEffect(() => {
-    const userName = getCurrentUserName();
-    setCurrentUser(userName || 'Usuario');
+    loadCurrentUserAndCheckAccess();
   }, []);
 
+  const loadCurrentUserAndCheckAccess = async () => {
+    const result = await getCurrentSession();
+    if (result.success) {
+      setCurrentUser(result.session.displayName || result.session.email || 'Usuario');
+      setCurrentUserId(result.session.userId);
+      
+      // Cargar datos de la tarea para verificar acceso
+      try {
+        const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+        if (taskDoc.exists()) {
+          const task = taskDoc.data();
+          setTaskData(task);
+          
+          // Verificar acceso según rol
+          const userRole = result.session.role;
+          const userEmail = result.session.email;
+          const userDepartment = result.session.department;
+          
+          if (userRole === 'admin') {
+            setHasAccess(true);
+          } else if (userRole === 'jefe' && task.area === userDepartment) {
+            setHasAccess(true);
+          } else if (userRole === 'operativo' && task.assignedTo === userEmail) {
+            setHasAccess(true);
+          } else {
+            setHasAccess(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando tarea:', error);
+        setHasAccess(false);
+      }
+    } else {
+      setCurrentUser('Usuario');
+      setCurrentUserId(null);
+      setHasAccess(false);
+    }
+  };
+
   useEffect(() => {
+    // Solo escuchar mensajes si tiene acceso
+    if (!hasAccess) return;
+    
     // Listener en tiempo real de la colección de mensajes de la tarea
     const q = query(collection(db, 'tasks', taskId, 'messages'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
@@ -35,10 +79,10 @@ export default function TaskChatScreen({ route, navigation }) {
     }, (err) => console.warn('Error listener chat', err));
 
     return () => unsub();
-  }, [taskId]);
+  }, [taskId, hasAccess]);
 
   const send = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !hasAccess) return;
     try {
       // 1. Enviar mensaje al chat
       await addDoc(collection(db, 'tasks', taskId, 'messages'), {
@@ -47,25 +91,24 @@ export default function TaskChatScreen({ route, navigation }) {
         createdAt: getServerTimestamp()
       });
       
-      // 2. Obtener información de la tarea para notificar
-      try {
-        const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-        if (taskDoc.exists()) {
-          const task = { id: taskDoc.id, ...taskDoc.data() };
-          const currentUID = getCurrentUserUID();
-          
-          // 3. Notificar a todos los usuarios con acceso (excepto quien envió)
-          if (task.userAccess && Array.isArray(task.userAccess)) {
-            task.userAccess.forEach(async (userId) => {
-              if (userId !== currentUID) {
-                await notifyNewComment(userId, task, currentUser);
-              }
-            });
-          }
-        }
-      } catch (notifError) {
-        console.warn('Error enviando notificación de comentario:', notifError);
-      }
+      // 2. Obtener información de la tarea para notificar (OPCIONAL - por ahora deshabilitado)
+      // El chat funcionará sin sistema de notificaciones push por comentarios
+      // Los usuarios verán los mensajes cuando abran el chat
+      
+      // TODO: Implementar notificaciones cuando tengas el sistema de usuarios completo
+      // try {
+      //   const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+      //   if (taskDoc.exists()) {
+      //     const task = { id: taskDoc.id, ...taskDoc.data() };
+      //     
+      //     // Notificar al responsable de la tarea si no es quien comentó
+      //     if (task.assignedTo && task.assignedTo !== currentUser) {
+      //       await notifyNewComment(task.assignedTo, task, currentUser);
+      //     }
+      //   }
+      // } catch (notifError) {
+      //   console.warn('Error enviando notificación de comentario:', notifError);
+      // }
       
       setText('');
       // scroll opcional
@@ -91,32 +134,44 @@ export default function TaskChatScreen({ route, navigation }) {
         <View style={{ width: 40 }} />
       </LinearGradient>
 
-      <FlatList
-        ref={flatRef}
-        data={messages}
-        keyExtractor={(i) => i.id}
-        contentContainerStyle={styles.messagesContainer}
-        renderItem={({ item }) => (
-          <View style={styles.msgRow}>
-            <Text style={styles.msgAuthor}>{item.author}</Text>
-            <Text style={styles.msgText}>{item.text}</Text>
-            <Text style={styles.msgTime}>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : ''}</Text>
-          </View>
-        )}
-      />
+      {!hasAccess ? (
+        <View style={styles.noAccessContainer}>
+          <Ionicons name="lock-closed" size={80} color="#C7C7CC" />
+          <Text style={styles.noAccessTitle}>Sin acceso</Text>
+          <Text style={styles.noAccessText}>
+            No tienes permisos para ver este chat
+          </Text>
+        </View>
+      ) : (
+        <>
+          <FlatList
+            ref={flatRef}
+            data={messages}
+            keyExtractor={(i) => i.id}
+            contentContainerStyle={styles.messagesContainer}
+            renderItem={({ item }) => (
+              <View style={styles.msgRow}>
+                <Text style={styles.msgAuthor}>{item.author}</Text>
+                <Text style={styles.msgText}>{item.text}</Text>
+                <Text style={styles.msgTime}>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : ''}</Text>
+              </View>
+            )}
+          />
 
-      <View style={styles.composer}>
-        <TextInput
-          placeholder="Mensaje..."
-          placeholderTextColor="#C7C7CC"
-          value={text}
-          onChangeText={setText}
-          style={styles.input}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={send}>
-          <Ionicons name="send" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.composer}>
+            <TextInput
+              placeholder="Mensaje..."
+              placeholderTextColor="#C7C7CC"
+              value={text}
+              onChangeText={setText}
+              style={styles.input}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={send}>
+              <Ionicons name="send" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -235,5 +290,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5
+  },
+  noAccessContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40
+  },
+  noAccessTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    marginTop: 20,
+    marginBottom: 12,
+    letterSpacing: -0.8
+  },
+  noAccessText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontWeight: '500'
   }
 });

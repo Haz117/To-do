@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getCurrentUserUID } from './auth';
+import { getCurrentSession } from './authFirestore';
 
 // Roles disponibles en el sistema
 export const ROLES = {
@@ -22,7 +22,14 @@ export const DEPARTMENTS = {
 // Obtener perfil completo del usuario
 export const getUserProfile = async (userId = null) => {
   try {
-    const uid = userId || getCurrentUserUID();
+    let uid = userId;
+    
+    if (!uid) {
+      const sessionResult = await getCurrentSession();
+      if (!sessionResult.success) return null;
+      uid = sessionResult.session.userId;
+    }
+    
     if (!uid) return null;
 
     const userDoc = await getDoc(doc(db, 'users', uid));
@@ -178,17 +185,17 @@ export const deactivateUser = async (userId) => {
   }
 };
 
-// Obtener nombres de todos los usuarios activos para asignación de tareas
+// Obtener emails de todos los usuarios activos para asignación de tareas
 export const getAllUsersNames = async () => {
   try {
     const q = query(collection(db, 'users'), where('active', '==', true));
     const snapshot = await getDocs(q);
     return snapshot.docs
-      .map(doc => doc.data().displayName || doc.data().email)
-      .filter(name => name) // Filtrar nulls/undefined
+      .map(doc => doc.data().email) // Usar email en lugar de displayName
+      .filter(email => email) // Filtrar nulls/undefined
       .sort();
   } catch (error) {
-    console.error('Error obteniendo nombres de usuarios:', error);
+    console.error('Error obteniendo emails de usuarios:', error);
     return [];
   }
 };

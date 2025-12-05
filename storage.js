@@ -1,28 +1,24 @@
 // storage.js
-// LEGACY/FALLBACK: Usado solo como respaldo local cuando Firebase no está disponible
-// Las tareas ahora se guardan principalmente en Firestore (services/tasks.js)
-// Helpers simples para guardar y cargar la lista de tareas en AsyncStorage
+// Archivo temporal para evitar errores de importación
+// TODO: Eliminar cuando se actualice services/tasks.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TASKS_KEY = '@todo_tasks_v1';
 
-// Guarda array de tareas (serializa JSON)
 export async function saveTasks(tasks) {
   try {
-    const s = JSON.stringify(tasks);
-    await AsyncStorage.setItem(TASKS_KEY, s);
+    await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   } catch (e) {
-    console.warn('Error guardando tareas en AsyncStorage', e);
+    console.warn('Error guardando tareas:', e);
   }
 }
 
-// Carga tareas (si no hay nada devuelve array vacío)
 export async function loadTasks() {
   try {
-    const s = await AsyncStorage.getItem(TASKS_KEY);
-    return s ? JSON.parse(s) : [];
+    const data = await AsyncStorage.getItem(TASKS_KEY);
+    return data ? JSON.parse(data) : [];
   } catch (e) {
-    console.warn('Error cargando tareas desde AsyncStorage', e);
+    console.warn('Error cargando tareas:', e);
     return [];
   }
 }

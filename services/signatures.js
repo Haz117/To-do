@@ -1,6 +1,22 @@
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getCurrentUserUID, getCurrentUserName } from './auth';
+import { getCurrentSession } from './authFirestore';
+
+/**
+ * Obtener ID del usuario actual
+ */
+async function getCurrentUserUID() {
+  const result = await getCurrentSession();
+  return result.success ? result.session.userId : null;
+}
+
+/**
+ * Obtener nombre del usuario actual
+ */
+async function getCurrentUserName() {
+  const result = await getCurrentSession();
+  return result.success ? (result.session.displayName || result.session.email) : 'Usuario';
+}
 
 /**
  * Registrar firma digital al completar una tarea
@@ -10,8 +26,8 @@ import { getCurrentUserUID, getCurrentUserName } from './auth';
  */
 export async function createSignature(taskId, signatureData = {}) {
   try {
-    const userId = getCurrentUserUID();
-    const userName = getCurrentUserName();
+    const userId = await getCurrentUserUID();
+    const userName = await getCurrentUserName();
 
     if (!userId) {
       throw new Error('Usuario no autenticado');
@@ -78,7 +94,7 @@ export async function getSignature(taskId) {
  */
 export async function getUserSignatures(userId = null) {
   try {
-    const uid = userId || getCurrentUserUID();
+    const uid = userId || await getCurrentUserUID();
     if (!uid) return [];
 
     const q = query(
@@ -127,8 +143,8 @@ export async function verifySignature(signatureId) {
  */
 export async function createAuditLog(action, details) {
   try {
-    const userId = getCurrentUserUID();
-    const userName = getCurrentUserName();
+    const userId = await getCurrentUserUID();
+    const userName = await getCurrentUserName();
 
     const log = {
       userId,

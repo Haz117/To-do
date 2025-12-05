@@ -14,27 +14,18 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { signIn, signUp } from '../services/auth';
-import { DEPARTMENTS } from '../services/roles';
+import { loginUser, registerUser } from '../services/authFirestore';
 
-export default function LoginScreen({ navigation }) {
-  const [isLogin, setIsLogin] = useState(true);
+export default function LoginScreen({ navigation, onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [department, setDepartment] = useState('');
-  const [showDepartments, setShowDepartments] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const departmentOptions = [
-    { value: DEPARTMENTS.PRESIDENCIA, label: 'Presidencia' },
-    { value: DEPARTMENTS.JURIDICA, label: 'Jurídica' },
-    { value: DEPARTMENTS.OBRAS, label: 'Obras Públicas' },
-    { value: DEPARTMENTS.TESORERIA, label: 'Tesorería' },
-    { value: DEPARTMENTS.RRHH, label: 'Recursos Humanos' },
-    { value: DEPARTMENTS.ADMINISTRACION, label: 'Administración' }
-  ];
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) {
@@ -42,44 +33,29 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    if (!isLogin) {
-      if (password !== confirmPassword) {
-        Alert.alert('Error', 'Las contraseñas no coinciden');
-        return;
-      }
-      if (!displayName.trim()) {
-        Alert.alert('Error', 'Por favor ingresa tu nombre');
-        return;
-      }
-      if (!department) {
-        Alert.alert('Error', 'Por favor selecciona tu departamento');
-        return;
-      }
+    if (!validateEmail(email.trim())) {
+      Alert.alert('Error', 'Por favor ingresa un email válido');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
     }
 
     setLoading(true);
     try {
-      if (isLogin) {
-        await signIn(email.trim(), password);
-        // La navegación se maneja en App.js con onAuthChange
+      const result = await loginUser(email.trim(), password);
+      if (result.success) {
+        if (onLogin) onLogin();
       } else {
-        await signUp(email.trim(), password, displayName.trim(), department);
-        Alert.alert('¡Bienvenido!', 'Tu cuenta ha sido creada exitosamente');
+        Alert.alert('Error', result.error);
       }
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setDisplayName('');
-    setDepartment('');
   };
 
   return (
@@ -102,67 +78,12 @@ export default function LoginScreen({ navigation }) {
             </View>
             <Text style={styles.title}>TodoApp</Text>
             <Text style={styles.subtitle}>
-              {isLogin ? 'Inicia sesión para continuar' : 'Crea tu cuenta'}
+              Inicia sesión para continuar
             </Text>
           </View>
 
           {/* Formulario */}
           <View style={styles.form}>
-            {!isLogin && (
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#8B0000" style={styles.inputIcon} />
-                <TextInput
-                  placeholder="Nombre completo"
-                  placeholderTextColor="#C7C7CC"
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  style={styles.input}
-                  autoCapitalize="words"
-                />
-              </View>
-            )}
-
-            {!isLogin && (
-              <TouchableOpacity 
-                style={styles.inputContainer} 
-                onPress={() => setShowDepartments(!showDepartments)}
-              >
-                <Ionicons name="business-outline" size={20} color="#8B0000" style={styles.inputIcon} />
-                <Text style={[styles.input, !department && styles.placeholder]}>
-                  {department ? departmentOptions.find(d => d.value === department)?.label : 'Selecciona tu departamento'}
-                </Text>
-                <Ionicons name={showDepartments ? "chevron-up" : "chevron-down"} size={20} color="#8B0000" />
-              </TouchableOpacity>
-            )}
-
-            {!isLogin && showDepartments && (
-              <View style={styles.dropdownContainer}>
-                {departmentOptions.map((dept) => (
-                  <TouchableOpacity
-                    key={dept.value}
-                    style={[
-                      styles.dropdownItem,
-                      department === dept.value && styles.dropdownItemSelected
-                    ]}
-                    onPress={() => {
-                      setDepartment(dept.value);
-                      setShowDepartments(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.dropdownText,
-                      department === dept.value && styles.dropdownTextSelected
-                    ]}>
-                      {dept.label}
-                    </Text>
-                    {department === dept.value && (
-                      <Ionicons name="checkmark-circle" size={20} color="#8B0000" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#8B0000" style={styles.inputIcon} />
               <TextInput
@@ -185,25 +106,17 @@ export default function LoginScreen({ navigation }) {
                 value={password}
                 onChangeText={setPassword}
                 style={styles.input}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
-            </View>
-
-            {!isLogin && (
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#8B0000" style={styles.inputIcon} />
-                <TextInput
-                  placeholder="Confirmar contraseña"
-                  placeholderTextColor="#C7C7CC"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  style={styles.input}
-                  secureTextEntry
-                  autoCapitalize="none"
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color="#8B0000" 
                 />
-              </View>
-            )}
+              </TouchableOpacity>
+            </View>
 
             {/* Botón principal */}
             <TouchableOpacity 
@@ -220,27 +133,17 @@ export default function LoginScreen({ navigation }) {
                 ) : (
                   <>
                     <Ionicons 
-                      name={isLogin ? 'log-in-outline' : 'person-add-outline'} 
+                      name="log-in-outline" 
                       size={20} 
                       color="#8B0000" 
                       style={{ marginRight: 8 }} 
                     />
                     <Text style={styles.buttonText}>
-                      {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
+                      Iniciar Sesión
                     </Text>
                   </>
                 )}
               </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Toggle Login/Registro */}
-            <TouchableOpacity style={styles.toggleButton} onPress={toggleMode}>
-              <Text style={styles.toggleText}>
-                {isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
-                <Text style={styles.toggleTextBold}>
-                  {isLogin ? 'Regístrate' : 'Inicia Sesión'}
-                </Text>
-              </Text>
             </TouchableOpacity>
           </View>
 
@@ -358,19 +261,6 @@ const styles = StyleSheet.create({
     color: '#8B0000',
     letterSpacing: 0.5
   },
-  toggleButton: {
-    alignItems: 'center',
-    paddingVertical: 12
-  },
-  toggleText: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500'
-  },
-  toggleTextBold: {
-    fontWeight: '700',
-    textDecorationLine: 'underline'
-  },
   footer: {
     marginTop: 40,
     alignItems: 'center',
@@ -385,37 +275,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500'
-  },
-  placeholder: {
-    color: '#C7C7CC'
-  },
-  dropdownContainer: {
-    backgroundColor: '#FFFAF0',
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#F5DEB3',
-    overflow: 'hidden'
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5DEB3'
-  },
-  dropdownItemSelected: {
-    backgroundColor: 'rgba(139, 0, 0, 0.05)'
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '500'
-  },
-  dropdownTextSelected: {
-    color: '#8B0000',
-    fontWeight: '700'
   }
 });

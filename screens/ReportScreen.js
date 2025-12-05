@@ -1,10 +1,13 @@
 // screens/ReportScreen.js
 // Reporte para reunión: tarjetas por área con contadores, lista de críticas (alta prioridad) y vencidas.
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Modal, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { subscribeToTasks } from '../services/tasks';
+import { PieChart, BarChart } from 'react-native-chart-kit';
+
+const screenWidth = Dimensions.get('window').width;
 
 const AREAS = ['Jurídica', 'Obras', 'Tesorería', 'Administración', 'Recursos Humanos'];
 const STATUSES = [
@@ -78,6 +81,38 @@ export default function ReportScreen({ navigation }) {
   const areaData = groupByArea();
   const criticalTasks = getCriticalTasks();
   const overdueTasks = getOverdueTasks();
+
+  // Data para gráfica de pie (estados)
+  const statusChartData = STATUSES.map(status => ({
+    name: status.label,
+    count: tasks.filter(t => t.status === status.key).length,
+    color: status.color,
+    legendFontColor: '#1A1A1A',
+    legendFontSize: 12
+  })).filter(item => item.count > 0);
+
+  // Data para gráfica de barras (áreas)
+  const areaChartData = {
+    labels: AREAS.map(a => a.substring(0, 8)),
+    datasets: [{
+      data: AREAS.map(area => areaData[area].total)
+    }]
+  };
+
+  const chartConfig = {
+    backgroundColor: '#FFFFFF',
+    backgroundGradientFrom: '#FFFFFF',
+    backgroundGradientTo: '#F8F9FA',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(139, 0, 0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(26, 26, 26, ${opacity})`,
+    style: {
+      borderRadius: 16
+    },
+    propsForLabels: {
+      fontSize: 10
+    }
+  };
 
   const renderAreaCard = (area) => {
     const data = areaData[area];
@@ -312,6 +347,23 @@ export default function ReportScreen({ navigation }) {
                 <Ionicons name="close-circle" size={28} color="#8E8E93" />
               </TouchableOpacity>
             </View>
+
+            {/* Gráfica de Pie */}
+            {statusChartData.length > 0 && (
+              <View style={styles.chartContainer}>
+                <PieChart
+                  data={statusChartData}
+                  width={screenWidth - 80}
+                  height={220}
+                  chartConfig={chartConfig}
+                  accessor="count"
+                  backgroundColor="transparent"
+                  paddingLeft="15"
+                  absolute
+                />
+              </View>
+            )}
+
             <View style={styles.statusBars}>
               {STATUSES.map(status => {
                 const count = tasks.filter(t => t.status === status.key).length;
@@ -354,6 +406,21 @@ export default function ReportScreen({ navigation }) {
                 <Ionicons name="close-circle" size={28} color="#8E8E93" />
               </TouchableOpacity>
             </View>
+
+            {/* Gráfica de Barras */}
+            <View style={styles.chartContainer}>
+              <BarChart
+                data={areaChartData}
+                width={screenWidth - 80}
+                height={220}
+                chartConfig={chartConfig}
+                verticalLabelRotation={30}
+                fromZero
+                showBarTops={false}
+                showValuesOnTopOfBars
+              />
+            </View>
+
             <ScrollView>
               {AREAS.map(area => {
                 const data = areaData[area];
@@ -499,8 +566,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3
   },
-  statNumber: { fontSize: 18, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.5, marginBottom: 4 },
-  statLabel: { fontSize: 11, color: '#6E6E73', textAlign: 'center', fontWeight: '600', letterSpacing: 0.3 },
+  statNumber: { fontSize: 20, fontWeight: '900', color: '#1A1A1A', letterSpacing: -0.5, marginBottom: 4 },
+  statLabel: { fontSize: 12, color: '#1A1A1A', textAlign: 'center', fontWeight: '700', letterSpacing: 0.5 },
   totalText: { fontSize: 16, fontWeight: '700', color: '#6E6E73', marginTop: 12, letterSpacing: 0.2 },
   taskCard: { 
     backgroundColor: '#FFFAF0', 
@@ -616,11 +683,14 @@ const styles = StyleSheet.create({
     marginVertical: 8
   },
   bentoNumber: {
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -2,
-    marginBottom: 4
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4
   },
   bentoSubtext: {
     fontSize: 13,
@@ -634,9 +704,12 @@ const styles = StyleSheet.create({
     marginTop: 4
   },
   bentoSubMetricText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '600'
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   bentoHint: {
     fontSize: 10,
@@ -694,11 +767,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF'
   },
   bentoLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 0.8,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   bentoFooter: {
     gap: 8
@@ -804,11 +880,20 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     padding: 24,
     maxHeight: '75%',
+    paddingBottom: 40,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20
   },
   modalHeader: {
     flexDirection: 'row',
@@ -820,8 +905,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0'
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#1A1A1A',
     letterSpacing: -0.5
   },

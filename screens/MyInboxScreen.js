@@ -1,23 +1,36 @@
 // screens/MyInboxScreen.js
 // "Mi bandeja" - lista de tareas asignadas al usuario actual, ordenadas por fecha de vencimiento.
 // Acciones rápidas: marcar cerrada y posponer 1 día. Abre detalle y chat.
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import TaskItem from '../components/TaskItem';
 import { subscribeToTasks, updateTask, deleteTask as deleteTaskFirebase } from '../services/tasks';
-import { getCurrentUserName } from '../services/auth';
 import { scheduleNotificationForTask, cancelNotification } from '../services/notifications';
+import { getCurrentSession } from '../services/authFirestore';
 
 export default function MyInboxScreen({ navigation }) {
   const [tasks, setTasks] = useState([]);
-  const [currentUser, setCurrentUser] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Cargar usuario actual desde Firebase Auth
   useEffect(() => {
-    const userName = getCurrentUserName();
-    setCurrentUser(userName);
+    loadCurrentUser();
+  }, []);
+
+  const loadCurrentUser = async () => {
+    const result = await getCurrentSession();
+    if (result.success) {
+      setCurrentUser(result.session);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
   }, []);
 
   // Suscribirse a cambios en tiempo real de Firebase
@@ -29,8 +42,15 @@ export default function MyInboxScreen({ navigation }) {
     return () => unsubscribe();
   }, []);
 
+  // Filtrar tareas asignadas al usuario actual y ordenar por fecha
   const filtered = tasks
-    .filter(t => t.assignedTo && t.assignedTo.toLowerCase() === (currentUser || '').toLowerCase())
+    .filter(task => {
+      // Si no hay usuario, no mostrar nada
+      if (!currentUser) return false;
+      
+      // Mostrar tareas asignadas al email del usuario
+      return task.assignedTo === currentUser.email;
+    })
     .sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
 
   const markClosed = async (task) => {
@@ -137,11 +157,15 @@ export default function MyInboxScreen({ navigation }) {
 
       <View style={styles.userSection}>
         <View style={styles.userLabelContainer}>
-          <Ionicons name="person-circle-outline" size={16} color="#8B0000" style={{ marginRight: 6 }} />
-          <Text style={styles.userLabel}>USUARIO ACTUAL</Text>
+          <Ionicons name="person-outline" size={16} color="#8B0000" style={{ marginRight: 6 }} />
+          <Text style={styles.userLabel}>MIS TAREAS ASIGNADAS</Text>
         </View>
-        <Text style={styles.currentUserName}>{currentUser || 'No configurado'}</Text>
-        <Text style={styles.currentUserHint}>Las tareas están filtradas para ti</Text>
+        <Text style={styles.currentUserName}>
+          {currentUser?.displayName || 'Cargando...'}
+        </Text>
+        <Text style={styles.currentUserHint}>
+          {currentUser?.email || 'Iniciando sesión...'}
+        </Text>
       </View>
 
       <FlatList
@@ -149,6 +173,14 @@ export default function MyInboxScreen({ navigation }) {
         keyExtractor={(i) => i.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#8B0000"
+            colors={['#8B0000']}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="mail-open-outline" size={80} color="#AEAEB2" style={{ marginBottom: 20, opacity: 0.3 }} />

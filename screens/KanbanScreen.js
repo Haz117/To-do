@@ -1,11 +1,17 @@
 // screens/KanbanScreen.js
-// Tablero Kanban con columnas por estado. Usa botones para cambiar estado de tareas.
+// Tablero Kanban con columnas por estado. Implementa Drag & Drop para cambiar estado de tareas.
 // Estados: pendiente, en_proceso, en_revision, cerrada
-// NOTA: Drag-and-drop requiere un build personalizado (Expo Dev Client), por ahora usa botones.
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import FilterBar from '../components/FilterBar';
 import { subscribeToTasks, updateTask } from '../services/tasks';
 
@@ -19,6 +25,8 @@ const STATUSES = [
 export default function KanbanScreen({ navigation }) {
   const [tasks, setTasks] = useState([]);
   const [filters, setFilters] = useState({ searchText: '', area: '', responsible: '', priority: '', overdue: false });
+  const [refreshing, setRefreshing] = useState(false);
+  const [draggingTask, setDraggingTask] = useState(null);
 
   // Suscribirse a cambios en tiempo real
   useEffect(() => {
@@ -29,15 +37,128 @@ export default function KanbanScreen({ navigation }) {
     return () => unsubscribe();
   }, []);
 
-  const changeStatus = async (taskId, newStatus) => {
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  const changeStatus = useCallback(async (taskId, newStatus) => {
     await updateTask(taskId, { status: newStatus });
     // La actualización del estado se hace automáticamente por el listener
+  }, []);
+
+  const openDetail = useCallback((task) => navigation.navigate('TaskDetail', { task }), [navigation]);
+
+  // Función para detectar en qué columna se soltó la tarjeta
+  const getColumnAtPosition = (x) => {
+    // Aproximación: cada columna tiene 300px de ancho + 16px de margen
+    const columnWidth = 316;
+    const columnIndex = Math.floor((x + 16) / columnWidth);
+    if (columnIndex >= 0 && columnIndex < STATUSES.length) {
+      return STATUSES[columnIndex].key;
+    }
+    return null;
   };
 
-  const openDetail = (task) => navigation.navigate('TaskDetail', { task });
+  const handleDragEnd = (task, event) => {
+    const { absoluteX } = event.nativeEvent;
+    const targetStatus = getColumnAtPosition(absoluteX);
+    
+    if (targetStatus && targetStatus !== task.status) {
+      changeStatus(task.id, targetStatus);
+    }
+    
+    setDraggingTask(null);
+  };
 
-  // Aplicar filtros
-  const applyFilters = (taskList) => {
+  // Componente de tarjeta arrastrable
+  const DraggableCard = ({ item, status }) => {
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+      zIndex: draggingTask?.id === item.id ? 1000 : 1,
+    }));
+
+    const onGestureEvent = useCallback((event) => {
+      const { translationX, translationY, state } = event.nativeEvent;
+
+      if (state === State.ACTIVE) {
+        translateX.value = translationX;
+        translateY.value = translationY;
+        scale.value = withSpring(1.05);
+        runOnJS(setDraggingTask)(item);
+      } else if (state === State.END || state === State.CANCELLED) {
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        scale.value = withSpring(1);
+        runOnJS(handleDragEnd)(item, event);
+      }
+    }, [item]);
+
+    return (
+      <PanGestureHandler onHandlerStateChange={onGestureEvent} onGestureEvent={onGestureEvent}>
+        <Animated.View style={[animatedStyle]}>
+          <TouchableOpacity
+            onPress={() => openDetail(item)}
+            style={[
+              styles.card,
+              draggingTask?.id === item.id && styles.cardDragging
+            ]}
+            activeOpacity={0.9}
+          >
+            <View style={styles.cardPriorityIndicator}>
+              <View style={[
+                styles.priorityDot,
+                item.priority === 'alta' && styles.priorityDotHigh,
+                item.priority === 'media' && styles.priorityDotMedium,
+                item.priority === 'baja' && styles.priorityDotLow
+              ]} />
+            </View>
+            
+            {/* Icono de drag */}
+            <View style={styles.dragHandle}>
+              <Ionicons name="reorder-two" size={20} color="#C7C7CC" />
+            </View>
+
+            <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+            <View style={styles.cardMetaRow}>
+              <Ionicons name="person-outline" size={14} color="#8E8E93" />
+              <Text style={styles.cardMeta}>{item.assignedTo || 'Sin asignar'}</Text>
+            </View>
+            <View style={styles.cardMetaRow}>
+              <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
+              <Text style={styles.cardDue}>{new Date(item.dueAt).toLocaleDateString()}</Text>
+            </View>
+
+            {/* Botones rápidos para cambiar estado (respaldo) */}
+            <View style={styles.actionsRow}>
+              {STATUSES.filter(s => s.key !== status.key).slice(0, 2).map(s => (
+                <TouchableOpacity
+                  key={s.key}
+                  onPress={() => changeStatus(item.id, s.key)}
+                  style={[styles.miniBtn, { borderColor: s.color }]}
+                >
+                  <Ionicons name={s.icon} size={14} color={s.color} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      </PanGestureHandler>
+    );
+  };
+
+  // Aplicar filtros con memoización
+  const applyFilters = useCallback((taskList) => {
     return taskList.filter(task => {
       if (filters.searchText && !task.title.toLowerCase().includes(filters.searchText.toLowerCase())) return false;
       if (filters.area && task.area !== filters.area) return false;
@@ -46,7 +167,7 @@ export default function KanbanScreen({ navigation }) {
       if (filters.overdue && task.dueAt >= Date.now()) return false;
       return true;
     });
-  };
+  }, [filters]);
 
   const renderColumn = (status) => {
     const byStatus = tasks.filter(t => (t.status || 'pendiente') === status.key);
@@ -67,43 +188,7 @@ export default function KanbanScreen({ navigation }) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => openDetail(item)}
-              style={styles.card}
-            >
-              <View style={styles.cardPriorityIndicator}>
-                <View style={[
-                  styles.priorityDot,
-                  item.priority === 'alta' && styles.priorityDotHigh,
-                  item.priority === 'media' && styles.priorityDotMedium,
-                  item.priority === 'baja' && styles.priorityDotLow
-                ]} />
-              </View>
-              <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-              <View style={styles.cardMetaRow}>
-                <Ionicons name="person-outline" size={14} color="#8E8E93" />
-                <Text style={styles.cardMeta}>{item.assignedTo || 'Sin asignar'}</Text>
-              </View>
-              <View style={styles.cardMetaRow}>
-                <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
-                <Text style={styles.cardDue}>{new Date(item.dueAt).toLocaleDateString()}</Text>
-              </View>
-
-              {/* Botones rápidos para cambiar estado */}
-              <View style={styles.actionsRow}>
-                {STATUSES.filter(s => s.key !== status.key).slice(0, 2).map(s => (
-                  <TouchableOpacity
-                    key={s.key}
-                    onPress={() => changeStatus(item.id, s.key)}
-                    style={[styles.miniBtn, { borderColor: s.color }]}
-                  >
-                    <Ionicons name={s.icon} size={14} color={s.color} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => <DraggableCard item={item} status={status} />}
           contentContainerStyle={{ paddingBottom: 12 }}
         />
       </View>
@@ -111,23 +196,47 @@ export default function KanbanScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.headerGradient}>
-        <View style={styles.header}>
-          <View>
-            <View style={styles.greetingContainer}>
-              <Ionicons name="grid" size={20} color="#FFFFFF" style={{ marginRight: 8, opacity: 0.9 }} />
-              <Text style={styles.greeting}>Vista de tablero</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <LinearGradient colors={['#8B0000', '#6B0000']} style={styles.headerGradient}>
+          <View style={styles.header}>
+            <View>
+              <View style={styles.greetingContainer}>
+                <Ionicons name="grid" size={20} color="#FFFFFF" style={{ marginRight: 8, opacity: 0.9 }} />
+                <Text style={styles.greeting}>Vista de tablero</Text>
+              </View>
+              <Text style={styles.heading}>Kanban</Text>
             </View>
-            <Text style={styles.heading}>Kanban</Text>
           </View>
-        </View>
-      </LinearGradient>
-      <FilterBar onFilterChange={setFilters} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.board}>
-        {STATUSES.map(renderColumn)}
-      </ScrollView>
-    </View>
+        </LinearGradient>
+        <FilterBar onFilterChange={setFilters} />
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.board}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#8B0000"
+              colors={['#8B0000']}
+            />
+          }
+        >
+          {STATUSES.map(renderColumn)}
+        </ScrollView>
+        
+        {/* Indicador visual de drag en proceso */}
+        {draggingTask && (
+          <View style={styles.dragIndicator}>
+            <Ionicons name="move" size={20} color="#8B0000" />
+            <Text style={styles.dragIndicatorText}>
+              Arrastra a una columna para cambiar estado
+            </Text>
+          </View>
+        )}
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -194,27 +303,28 @@ const styles = StyleSheet.create({
     flex: 1
   },
   columnTitle: { 
-    fontWeight: '700', 
+    fontWeight: '800', 
     fontSize: 17,
-    letterSpacing: 0.2
+    letterSpacing: 0.2,
+    flex: 1
   },
   columnCount: { 
-    fontSize: 13, 
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    minWidth: 28
+    fontSize: 14, 
+    fontWeight: '800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    minWidth: 32
   },
   columnCountText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
     textAlign: 'center'
   },
   card: { 
-    margin: 12, 
-    padding: 14, 
+    margin: 10, 
+    padding: 12, 
     backgroundColor: '#FFFFFF', 
     borderRadius: 12,
     borderWidth: 1,
@@ -224,6 +334,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1
+  },
+  cardDragging: {
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+    borderColor: '#8B0000',
+    borderWidth: 2,
+    backgroundColor: '#FFFBF5'
+  },
+  dragHandle: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    padding: 4
   },
   cardPriorityIndicator: {
     position: 'absolute',
@@ -248,27 +374,29 @@ const styles = StyleSheet.create({
   },
   cardTitle: { 
     fontSize: 16, 
-    fontWeight: '700', 
+    fontWeight: '800', 
     marginBottom: 10, 
     color: '#1A1A1A',
-    letterSpacing: -0.3,
-    paddingRight: 20
+    letterSpacing: -0.2,
+    paddingRight: 24,
+    lineHeight: 22
   },
   cardMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
-    gap: 6
+    marginBottom: 8,
+    gap: 8
   },
   cardMeta: { 
     fontSize: 14, 
-    color: '#6E6E73', 
-    fontWeight: '500'
+    color: '#1A1A1A', 
+    fontWeight: '600',
+    flex: 1
   },
   cardDue: { 
     fontSize: 13, 
-    color: '#8E8E93',
-    fontWeight: '500'
+    color: '#6E6E73',
+    fontWeight: '600'
   },
   actionsRow: { 
     flexDirection: 'row', 
@@ -283,5 +411,33 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  dragIndicator: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFAF0',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#8B0000'
+  },
+  dragIndicatorText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B0000',
+    letterSpacing: 0.3
   }
 });

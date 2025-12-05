@@ -1,13 +1,15 @@
 // screens/TaskDetailScreen.js
 // Formulario para crear o editar una tarea. Incluye DateTimePicker y programación de notificación.
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, TextInput, Platform, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Button, TextInput, Platform, Alert, TouchableOpacity, ScrollView, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { createTask, updateTask } from '../services/tasks';
 import { getAllUsersNames } from '../services/roles';
-import { scheduleNotificationForTask, cancelNotification, cancelNotifications, scheduleDailyReminders, notifyAssignment } from '../services/notifications';
+import { scheduleNotificationForTask, cancelNotification, notifyAssignment } from '../services/notifications';
+import { getCurrentSession } from '../services/authFirestore';
+import Toast from '../components/Toast';
 
 export default function TaskDetailScreen({ route, navigation }) {
   // Si route.params.task está presente, estamos editando; si no, creamos nueva
@@ -24,20 +26,76 @@ export default function TaskDetailScreen({ route, navigation }) {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState(dueAt);
   const [peopleNames, setPeopleNames] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [canEdit, setCanEdit] = useState(false);
+  
+  // Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  
+  // Animaciones
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const saveSuccessAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const areas = ['Jurídica', 'Obras', 'Tesorería', 'Administración', 'Recursos Humanos'];
   const priorities = ['baja', 'media', 'alta'];
   const statuses = ['pendiente', 'en_proceso', 'en_revision', 'cerrada'];
 
+  // Mapeo de áreas a departamentos
+  const areaToDepMap = {
+    'Jurídica': 'juridica',
+    'Obras': 'obras',
+    'Tesorería': 'tesoreria',
+    'Administración': 'administracion',
+    'Recursos Humanos': 'rrhh'
+  };
+
+  const depToAreaMap = {
+    'juridica': 'Jurídica',
+    'obras': 'Obras',
+    'tesoreria': 'Tesorería',
+    'administracion': 'Administración',
+    'rrhh': 'Recursos Humanos'
+  };
+
   useEffect(() => {
     navigation.setOptions({ title: editingTask ? 'Editar tarea' : 'Crear tarea' });
     loadUserNames();
-  }, [editingTask]);
+    checkPermissions();
+    
+    // Animar entrada del formulario
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [editingTask, fadeAnim]);
 
-  const loadUserNames = async () => {
+  const loadUserNames = useCallback(async () => {
     const names = await getAllUsersNames();
     setPeopleNames(names);
-  };
+  }, []);
+
+  const checkPermissions = useCallback(async () => {
+    const result = await getCurrentSession();
+    if (result.success) {
+      setCurrentUser(result.session);
+      const userRole = result.session.role;
+      
+      // Admin y jefe pueden editar todo
+      // Operativo solo puede cambiar el status de tareas asignadas a él
+      if (userRole === 'admin' || userRole === 'jefe') {
+        setCanEdit(true);
+      } else if (userRole === 'operativo' && editingTask && editingTask.assignedTo === result.session.email) {
+        setCanEdit(false); // Solo puede cambiar status, no editar completo
+      } else {
+        setCanEdit(false);
+      }
+    }
+  }, [editingTask]);
 
   const onChangeDate = (event, selectedDate) => {
     if (Platform.OS === 'android') {
@@ -75,12 +133,114 @@ export default function TaskDetailScreen({ route, navigation }) {
   };
 
   const save = async () => {
+    if (isSaving) return; // Prevenir doble clic
+    
+    // Validaciones de campos
     if (!title.trim()) {
-      Alert.alert('Validación', 'El título es obligatorio');
+      Alert.alert('Campo requerido', 'El título es obligatorio');
       return;
     }
 
+    if (title.trim().length < 3) {
+      Alert.alert('Título muy corto', 'El título debe tener al menos 3 caracteres');
+      return;
+    }
+
+    if (title.trim().length > 100) {
+      Alert.alert('Título muy largo', 'El título no puede tener más de 100 caracteres');
+      return;
+    }
+
+    if (!description.trim()) {
+      Alert.alert('Campo requerido', 'La descripción es obligatoria');
+      return;
+    }
+
+    if (description.trim().length < 10) {
+      Alert.alert('Descripción muy corta', 'La descripción debe tener al menos 10 caracteres');
+      return;
+    }
+
+    if (!assignedTo) {
+      Alert.alert('Campo requerido', 'Debes asignar la tarea a alguien');
+      return;
+    }
+
+    // Validar que la fecha no sea demasiado en el pasado
+    const now = Date.now();
+    const oneHourAgo = now - 3600000; // 1 hora atrás
+    if (!editingTask && dueAt.getTime() < oneHourAgo) {
+      Alert.alert(
+        'Fecha en el pasado',
+        '¿Estás seguro de crear una tarea con fecha vencida?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Continuar', onPress: () => proceedWithSave() }
+        ]
+      );
+      return;
+    }
+
+    await proceedWithSave();
+  };
+
+  const proceedWithSave = async () => {
+    setIsSaving(true);
+    
     try {
+      // Validar permisos
+      if (!currentUser) {
+        Alert.alert('Error', 'No estás autenticado');
+        setIsSaving(false);
+        return;
+      }
+
+      // Operativos solo pueden actualizar status
+      if (currentUser.role === 'operativo' && !canEdit && editingTask) {
+        // Solo permitir cambio de status
+        if (editingTask.assignedTo !== currentUser.email) {
+          Alert.alert('Sin permisos', 'No puedes modificar esta tarea');
+          setIsSaving(false);
+          return;
+        }
+        // Actualizar solo el status
+        await updateTask(editingTask.id, { status });
+        setIsSaving(false);
+        navigation.goBack();
+        return;
+      }
+
+      // Admin y jefe pueden crear/editar tareas completas
+      if (currentUser.role !== 'admin' && currentUser.role !== 'jefe') {
+        Alert.alert('Sin permisos', 'Solo administradores y jefes pueden crear/editar tareas');
+        setIsSaving(false);
+        return;
+      }
+
+      // Jefes solo pueden crear/editar tareas de su área
+      if (currentUser.role === 'jefe') {
+        const taskDepartment = areaToDepMap[area] || area.toLowerCase();
+        if (taskDepartment !== currentUser.department) {
+          Alert.alert('Sin permisos', 'Solo puedes crear/editar tareas de tu área');
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Animación de presión
+      Animated.sequence([
+        Animated.timing(buttonScale, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
       // Construir objeto tarea
       const taskData = {
         title: title.trim(),
@@ -98,47 +258,61 @@ export default function TaskDetailScreen({ route, navigation }) {
         // Actualizar tarea existente
         taskId = editingTask.id;
         
-        // Cancelar notificaciones previas
-        if (editingTask.notificationId) await cancelNotification(editingTask.notificationId);
-        if (editingTask.dailyReminderIds) await cancelNotifications(editingTask.dailyReminderIds);
+        // Cancelar notificación previa solo si existe
+        if (editingTask.notificationId) {
+          await cancelNotification(editingTask.notificationId);
+        }
         
         await updateTask(taskId, taskData);
+        
+        // Mostrar toast de éxito
+        setToastMessage('Tarea actualizada exitosamente');
+        setToastType('success');
+        setToastVisible(true);
+        
+        // Navegar después de un breve delay
+        setTimeout(() => navigation.goBack(), 1500);
       } else {
         // Crear nueva tarea
         taskId = await createTask(taskData);
+        
+        // Mostrar toast de éxito
+        setToastMessage('Tarea creada exitosamente');
+        setToastType('success');
+        setToastVisible(true);
+        
+        // Navegar después de un breve delay
+        setTimeout(() => navigation.goBack(), 1500);
       }
 
-      // Programar notificaciones
+      // Crear objeto task completo con ID para notificaciones
       const task = { ...taskData, id: taskId };
-      
-      // Programar nueva notificación (10 min antes)
-      const notifId = await scheduleNotificationForTask(task, { minutesBefore: 10 });
-      if (notifId) {
-        await updateTask(taskId, { notificationId: notifId });
-      }
 
-      // Programar recordatorios diarios (solo si no está cerrada)
+      // Programar notificaciones solo si la tarea no está cerrada (async, no bloquea)
       if (task.status !== 'cerrada') {
-        const dailyIds = await scheduleDailyReminders(task);
-        if (dailyIds.length > 0) {
-          await updateTask(taskId, { dailyReminderIds: dailyIds });
-        }
+        scheduleNotificationForTask(task, { minutesBefore: 10 }).then(notifId => {
+          if (notifId) {
+            updateTask(taskId, { notificationId: notifId });
+          }
+        });
       }
 
-      // Notificar asignación si es tarea nueva o cambió el responsable
+      // Notificar asignación si es tarea nueva o cambió el responsable (async)
       const isNewTask = !editingTask;
       const assignedToChanged = editingTask && editingTask.assignedTo !== task.assignedTo;
       if ((isNewTask || assignedToChanged) && task.assignedTo) {
-        await notifyAssignment(task);
+        notifyAssignment(task);
       }
       
-      // Mostrar confirmación
-      Alert.alert('Éxito', editingTask ? 'Tarea actualizada correctamente' : 'Tarea creada correctamente', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      setIsSaving(false);
     } catch (e) {
+      setIsSaving(false);
       console.error('Error guardando tarea:', e);
-      Alert.alert('Error', `No se pudo guardar la tarea: ${e.message}`);
+      
+      // Mostrar toast de error
+      setToastMessage(`Error al guardar: ${e.message || 'Error desconocido'}`);
+      setToastType('error');
+      setToastVisible(true);
     }
   };
 
@@ -163,20 +337,37 @@ export default function TaskDetailScreen({ route, navigation }) {
         <View style={{ width: 40 }} />
       </LinearGradient>
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.label}>TÍTULO</Text>
-        <TextInput value={title} onChangeText={setTitle} placeholder="Título corto" placeholderTextColor="#C7C7CC" style={styles.input} />
+        <TextInput 
+          value={title} 
+          onChangeText={setTitle} 
+          placeholder="Título corto" 
+          placeholderTextColor="#C7C7CC" 
+          style={styles.input}
+          editable={canEdit}
+        />
 
       <Text style={styles.label}>DESCRIPCIÓN</Text>
-      <TextInput value={description} onChangeText={setDescription} placeholder="Descripción" placeholderTextColor="#C7C7CC" style={[styles.input, {height:80}]} multiline />
+      <TextInput 
+        value={description} 
+        onChangeText={setDescription} 
+        placeholder="Descripción" 
+        placeholderTextColor="#C7C7CC" 
+        style={[styles.input, {height:80}]} 
+        multiline
+        editable={canEdit}
+      />
 
       <Text style={styles.label}>ASIGNADO A</Text>
       <View style={styles.pickerRow}>
         {peopleNames.map(name => (
           <TouchableOpacity
             key={name}
-            onPress={() => setAssignedTo(name)}
-            style={[styles.optionBtn, assignedTo === name && styles.optionBtnActive]}
+            onPress={() => canEdit && setAssignedTo(name)}
+            style={[styles.optionBtn, assignedTo === name && styles.optionBtnActive, !canEdit && styles.optionBtnDisabled]}
+            disabled={!canEdit}
           >
             <Text style={[styles.optionText, assignedTo === name && styles.optionTextActive]}>{name}</Text>
           </TouchableOpacity>
@@ -185,15 +376,25 @@ export default function TaskDetailScreen({ route, navigation }) {
 
       <Text style={styles.label}>ÁREA</Text>
       <View style={styles.pickerRow}>
-        {areas.map(a => (
-          <TouchableOpacity
-            key={a}
-            onPress={() => setArea(a)}
-            style={[styles.optionBtn, area === a && styles.optionBtnActive]}
-          >
-            <Text style={[styles.optionText, area === a && styles.optionTextActive]}>{a}</Text>
-          </TouchableOpacity>
-        ))}
+        {areas.map(a => {
+          // Jefes solo pueden seleccionar su propia área
+          const areaDep = areaToDepMap[a] || a.toLowerCase();
+          const canSelectArea = canEdit && (currentUser?.role === 'admin' || areaDep === currentUser?.department);
+          return (
+            <TouchableOpacity
+              key={a}
+              onPress={() => canSelectArea && setArea(a)}
+              style={[
+                styles.optionBtn, 
+                area === a && styles.optionBtnActive, 
+                !canSelectArea && styles.optionBtnDisabled
+              ]}
+              disabled={!canSelectArea}
+            >
+              <Text style={[styles.optionText, area === a && styles.optionTextActive]}>{a}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.label}>PRIORIDAD</Text>
@@ -201,8 +402,9 @@ export default function TaskDetailScreen({ route, navigation }) {
         {priorities.map(p => (
           <TouchableOpacity
             key={p}
-            onPress={() => setPriority(p)}
-            style={[styles.optionBtn, priority === p && styles.optionBtnActive]}
+            onPress={() => canEdit && setPriority(p)}
+            style={[styles.optionBtn, priority === p && styles.optionBtnActive, !canEdit && styles.optionBtnDisabled]}
+            disabled={!canEdit}
           >
             <Text style={[styles.optionText, priority === p && styles.optionTextActive]}>
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -264,8 +466,18 @@ export default function TaskDetailScreen({ route, navigation }) {
         />
       )}
 
-      <TouchableOpacity style={styles.saveButton} onPress={save}>
-        <Text style={styles.saveButtonText}>{editingTask ? 'Guardar Cambios' : 'Crear Tarea'}</Text>
+      <TouchableOpacity 
+        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+        onPress={save}
+        disabled={isSaving}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={{ transform: [{ scale: buttonScale }], flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {isSaving && <ActivityIndicator color="#FFFFFF" size="small" />}
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Guardando...' : (editingTask ? '✅ Guardar Cambios' : '✨ Crear Tarea')}
+          </Text>
+        </Animated.View>
       </TouchableOpacity>
 
       {editingTask && (
@@ -274,6 +486,14 @@ export default function TaskDetailScreen({ route, navigation }) {
         </TouchableOpacity>
       )}
       </ScrollView>
+      </Animated.View>
+      
+      <Toast 
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 }
@@ -320,27 +540,29 @@ const styles = StyleSheet.create({
     padding: 24
   },
   label: { 
-    marginTop: 24, 
-    marginBottom: 10,
-    color: '#6E6E73', 
-    fontWeight: '700', 
+    marginTop: 20, 
+    marginBottom: 8,
+    color: '#1A1A1A', 
+    fontWeight: '800', 
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1
   },
   input: { 
     padding: 16, 
-    backgroundColor: '#FFFAF0', 
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 14,
     color: '#1A1A1A',
-    fontSize: 17,
-    shadowColor: '#DAA520',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1.5,
-    borderColor: '#F5DEB3'
+    fontSize: 16,
+    fontWeight: '600',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: '#F5DEB3',
+    minHeight: 52
   },
   dateButton: {
     borderRadius: 16,
@@ -379,14 +601,14 @@ const styles = StyleSheet.create({
     marginBottom: 4
   },
   dateText: {
-    fontSize: 18,
+    fontSize: 17,
     color: '#FFFFFF',
     fontWeight: '700',
     letterSpacing: -0.3,
     marginBottom: 2
   },
   timeText: {
-    fontSize: 16,
+    fontSize: 15,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '600'
   },
@@ -398,31 +620,41 @@ const styles = StyleSheet.create({
     gap: 10
   },
   optionBtn: { 
-    paddingHorizontal: 20, 
+    paddingHorizontal: 16, 
     paddingVertical: 12, 
     backgroundColor: '#FFFAF0', 
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#F5DEB3'
+    borderWidth: 2,
+    borderColor: '#F5DEB3',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1
   },
   optionBtnActive: { 
     backgroundColor: '#8B0000',
     borderColor: '#8B0000',
-    shadowColor: '#DAA520',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3
+    shadowRadius: 8,
+    elevation: 5,
+    transform: [{ scale: 1.02 }]
+  },
+  optionBtnDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#E5E5EA'
   },
   optionText: { 
     fontSize: 15, 
     color: '#1A1A1A', 
-    fontWeight: '600',
-    letterSpacing: 0.2
+    fontWeight: '700',
+    letterSpacing: 0.1
   },
   optionTextActive: { 
-    color: '#fff', 
-    fontWeight: '700'
+    color: '#FFFFFF', 
+    fontWeight: '800'
   },
   saveButton: {
     backgroundColor: '#8B0000',
@@ -435,6 +667,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 8
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#999',
+    opacity: 0.6
   },
   saveButtonText: {
     color: '#fff',
