@@ -533,8 +533,8 @@ const createStyles = (theme, isDark) => StyleSheet.create({
   },
   cardTitle: { 
     fontSize: 16,
-    fontWeight: '700',,
-    color: theme.text
+    fontWeight: '700',
+    color: theme.text,
     marginBottom: 14,
     lineHeight: 22,
     letterSpacing: -0.2
