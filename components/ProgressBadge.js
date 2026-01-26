@@ -1,9 +1,9 @@
 // components/ProgressBadge.js
 // Badge con barra de progreso animada
-import React, { useEffect, useRef, memo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 
-const ProgressBadge = memo(function ProgressBadge({ 
+export default function ProgressBadge({ 
   status = 'pendiente', 
   progress = 0, // 0 a 100
   animated = true,
@@ -70,9 +70,7 @@ const ProgressBadge = memo(function ProgressBadge({
       </View>
     </View>
   );
-});
-
-export default ProgressBadge;
+}
 
 const styles = StyleSheet.create({
   container: {

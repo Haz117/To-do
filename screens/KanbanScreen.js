@@ -1,7 +1,7 @@
 // screens/KanbanScreen.js
 // Tablero Kanban con columnas por estado. Implementa Drag & Drop para cambiar estado de tareas.
 // Estados: pendiente, en_proceso, en_revision, cerrada - Compatible con web
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, RefreshControl, Animated, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getGestureHandlerRootView } from '../utils/platformComponents';
@@ -337,15 +337,23 @@ export default function KanbanScreen({ navigation }) {
     }
   };
 
-  const renderColumn = (status) => {
-    const byStatus = tasks.filter(t => {
-      const taskStatus = t.status || 'pendiente';
-      console.log(`[Kanban] Tarea "${t.title}" - status en BD: "${t.status}", status normalizado: "${taskStatus}", comparando con "${status.key}": ${taskStatus === status.key}`);
-      return taskStatus === status.key;
+  // Memoizar tareas por estado para evitar recalcular en cada render
+  const tasksByStatus = useMemo(() => {
+    const grouped = {};
+    STATUSES.forEach(status => {
+      const byStatus = tasks.filter(t => {
+        const taskStatus = t.status || 'pendiente';
+        return taskStatus === status.key;
+      });
+      const filtered = applyFilters(byStatus);
+      const sorted = sortTasks(filtered);
+      grouped[status.key] = { byStatus, filtered, sorted };
     });
-    console.log(`[Kanban] Columna ${status.key}: ${byStatus.length} tareas`, byStatus.map(t => ({ id: t.id, title: t.title, status: t.status })));
-    const filtered = applyFilters(byStatus);
-    const sorted = sortTasks(filtered);
+    return grouped;
+  }, [tasks, applyFilters, sortTasks]);
+
+  const renderColumn = (status) => {
+    const { byStatus, filtered, sorted } = tasksByStatus[status.key] || { byStatus: [], filtered: [], sorted: [] };
     const completionRate = byStatus.length > 0 ? (filtered.length / byStatus.length) * 100 : 0;
 
     return (
