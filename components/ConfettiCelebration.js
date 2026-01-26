@@ -1,12 +1,12 @@
 // components/ConfettiCelebration.js
 // Componente de confetti para celebrar completar tareas - Compatible con web
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { getConfettiCannon } from '../utils/platformComponents';
 
 const ConfettiCannon = getConfettiCannon();
 
-export default function ConfettiCelebration({ 
+const ConfettiCelebration = memo(function ConfettiCelebration({ 
   trigger, 
   count = 50, 
   duration = 2000,
@@ -36,7 +36,9 @@ export default function ConfettiCelebration({
       />
     </View>
   );
-}
+});
+
+export default ConfettiCelebration;
 
 const styles = StyleSheet.create({
   container: {
