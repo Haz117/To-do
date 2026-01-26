@@ -193,6 +193,66 @@ export async function notifyAssignment(task) {
   }
 }
 
+// Notificación diaria de tareas vencidas (se programa cada 24 horas)
+export async function scheduleOverdueTasksNotification(overdueTasks) {
+  // En web no programar notificaciones
+  if (Platform.OS === 'web') {
+    return null;
+  }
+  
+  // No notificar si no hay tareas vencidas
+  if (!overdueTasks || overdueTasks.length === 0) {
+    return null;
+  }
+  
+  try {
+    const granted = await ensurePermissions();
+    if (!granted) {
+      return null;
+    }
+
+    // Cancelar notificaciones previas de este tipo
+    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of allScheduled) {
+      if (notif.content.data?.type === 'overdue_daily') {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const count = overdueTasks.length;
+    const taskTitles = overdueTasks.slice(0, 3).map(t => `• ${t.title}`).join('\n');
+    const moreText = count > 3 ? `\n... y ${count - 3} más` : '';
+
+    // Programar notificación para mañana a las 9:00 AM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🚨 ${count} ${count === 1 ? 'Tarea Vencida' : 'Tareas Vencidas'}`,
+        body: `Tienes ${count} ${count === 1 ? 'tarea pendiente vencida' : 'tareas pendientes vencidas'}:\n${taskTitles}${moreText}`,
+        data: { 
+          type: 'overdue_daily',
+          taskCount: count,
+          taskIds: overdueTasks.map(t => t.id)
+        },
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        color: '#DC2626',
+        badge: count
+      },
+      trigger: tomorrow
+    });
+
+    console.log(`Notificación de tareas vencidas programada para ${tomorrow.toLocaleString()}`);
+    return id;
+  } catch (e) {
+    console.error('Error programando notificación de tareas vencidas:', e);
+    return null;
+  }
+}
+
 export async function cancelNotification(notificationId) {
   // En web no hay notificaciones que cancelar
   if (Platform.OS === 'web') {

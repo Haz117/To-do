@@ -171,10 +171,17 @@ const TaskItem = memo(function TaskItem({
                     <Ionicons name="chatbubble" size={10} color="#FFF" />
                   </View>
                 )}
-                {remaining <= 0 && task.status !== 'cerrada' && <PulsingDot size={8} color={theme.error} />}
-                <Text style={[styles.badge, { backgroundColor: remaining <= 0 ? theme.error : theme.info, color: '#FFF' }]}>
-                  {formatRemaining(remaining)}
-                </Text>
+                {remaining <= 0 && task.status !== 'cerrada' && (
+                  <View style={styles.overdueBadgeContainer}>
+                    <PulsingDot size={8} color="#DC2626" />
+                    <Text style={styles.overdueBadge}>🚨 VENCIDA</Text>
+                  </View>
+                )}
+                {!(remaining <= 0 && task.status !== 'cerrada') && (
+                  <Text style={[styles.badge, { backgroundColor: remaining <= 0 ? theme.error : theme.info, color: '#FFF' }]}>
+                    {formatRemaining(remaining)}
+                  </Text>
+                )}
               </View>
             </View>
             <View style={styles.metaRow}>

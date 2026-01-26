@@ -13,12 +13,16 @@ import { getCurrentSession } from '../services/authFirestore';
 import { hapticMedium } from '../utils/haptics';
 import Toast from '../components/Toast';
 import { useTheme } from '../contexts/ThemeContext';
+import { scheduleOverdueTasksNotification } from '../services/notifications';
 
 export default function MyInboxScreen({ navigation }) {
   const { theme, isDark } = useTheme();
   const [tasks, setTasks] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
 
   useEffect(() => {
     loadCurrentUser();
@@ -67,28 +71,31 @@ export default function MyInboxScreen({ navigation }) {
     })
     .sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
 
+  // Contar tareas vencidas
+  const overdueTasks = filtered.filter(task => task.dueAt < Date.now() && task.status !== 'cerrada');
+  const overdueCount = overdueTasks.length;
+
+  // Programar notificación diaria de tareas vencidas
+  useEffect(() => {
+    if (overdueCount > 0) {
+      scheduleOverdueTasksNotification(overdueTasks);
+    }
+  }, [overdueCount]);
+
   const markClosed = async (task) => {
     try {
       hapticMedium();
       // Cancelar notificación existente
       if (task.notificationId) await cancelNotification(task.notificationId);
       await updateTask(task.id, { status: 'cerrada' });
-      Toast.show({
-        type: 'success',
-        text1: 'Completada',
-        text2: 'Tarea marcada como completada',
-        position: 'top',
-        visibilityTime: 2000,
-      });
+      setToastMessage('Tarea completada exitosamente');
+      setToastType('success');
+      setToastVisible(true);
       // La actualización del estado se hace automáticamente por el listener
     } catch (e) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Error al marcar como cerrada: ' + e.message,
-        position: 'top',
-        visibilityTime: 3000,
-      });
+      setToastMessage('Error al marcar como cerrada: ' + e.message);
+      setToastType('error');
+      setToastVisible(true);
       console.warn('Error marcando cerrada', e);
     }
   };
@@ -184,6 +191,20 @@ export default function MyInboxScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Banner de advertencia para tareas vencidas */}
+      {overdueCount > 0 && (
+        <View style={[styles.overdueAlert, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2', borderColor: '#DC2626' }]}>
+          <Ionicons name="warning" size={24} color="#DC2626" />
+          <View style={styles.alertTextContainer}>
+            <Text style={[styles.alertTitle, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>
+              ⚠️ {overdueCount} {overdueCount === 1 ? 'tarea vencida' : 'tareas vencidas'}
+            </Text>
+            <Text style={[styles.alertSubtitle, { color: isDark ? '#FEE2E2' : '#991B1B' }]}>
+              {overdueCount === 1 ? 'Requiere atención inmediata' : 'Requieren atención inmediata'}
+            </Text>
+          </View>
+        </View>
+      )}
       <View style={[styles.headerGradient, { backgroundColor: isDark ? '#1A1A1A' : theme.primary }]}>
         <View style={styles.header}>
           <View>
@@ -234,6 +255,13 @@ export default function MyInboxScreen({ navigation }) {
             message="No tienes tareas asignadas en este momento. ¡Disfruta tu tiempo libre!"
           />
         }
+      />
+      
+      <Toast 
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
       />
     </View>
   );
@@ -389,6 +417,34 @@ const createStyles = (theme, isDark) => StyleSheet.create({
     color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
+    fontWeight: '500'
+  },
+  overdueAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 2,
+    gap: 12,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  alertTextContainer: {
+    flex: 1
+  },
+  alertTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2
+  },
+  alertSubtitle: {
+    fontSize: 13,
     fontWeight: '500'
   }
 });
