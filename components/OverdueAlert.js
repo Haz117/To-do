@@ -47,7 +47,7 @@ export default function OverdueAlert({ tasks, currentUserEmail, role = 'operativ
       <Ionicons name="warning" size={24} color="#DC2626" />
       <View style={styles.alertTextContainer}>
         <Text style={[styles.alertTitle, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>
-          ⚠️ {overdueCount} {overdueCount === 1 ? 'tarea vencida' : 'tareas vencidas'}
+          {overdueCount} {overdueCount === 1 ? 'tarea vencida' : 'tareas vencidas'}
         </Text>
         <Text style={[styles.alertSubtitle, { color: isDark ? '#FEE2E2' : '#991B1B' }]}>
           {overdueCount === 1 ? 'Requiere atención inmediata' : 'Requieren atención inmediata'}

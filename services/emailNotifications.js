@@ -68,7 +68,7 @@ function getEmailTemplate(title, content, actionUrl, actionText) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📋 ${title}</h1>
+      <h1>${title}</h1>
     </div>
     <div class="content">
       ${content}
@@ -109,7 +109,7 @@ export async function notifyTaskAssigned(task, assignedTo) {
   
   return await sendEmail({
     to: assignedTo,
-    subject: `📋 Nueva tarea: ${task.title}`,
+    subject: `Nueva tarea: ${task.title}`,
     html
   });
 }
@@ -184,7 +184,7 @@ export async function sendDailySummary(userEmail, summary) {
   let statusHtml = '';
   if (overdue > 0) {
     statusHtml += `<div style="background: #FEE; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #EF4444;">
-      <strong style="color: #EF4444;">⚠️ ${overdue} tarea${overdue > 1 ? 's' : ''} vencida${overdue > 1 ? 's' : ''}</strong>
+      <strong style="color: #EF4444;">${overdue} tarea${overdue > 1 ? 's' : ''} vencida${overdue > 1 ? 's' : ''}</strong>
     </div>`;
   }
   if (dueToday > 0) {
@@ -220,7 +220,7 @@ export async function sendDailySummary(userEmail, summary) {
   
   return await sendEmail({
     to: userEmail,
-    subject: `📋 Resumen del día - ${new Date().toLocaleDateString('es-ES')}`,
+    subject: `Resumen del día - ${new Date().toLocaleDateString('es-ES')}`,
     html
   });
 }

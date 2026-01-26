@@ -162,11 +162,11 @@ export default function KanbanScreen({ navigation }) {
     try {
       hapticMedium(); // Haptic on status change
       await updateTask(taskId, { status: newStatus });
-      setToastMessage('✅ Estado actualizado correctamente');
+      setToastMessage('Estado actualizado correctamente');
       setToastType('success');
       setToastVisible(true);
     } catch (error) {
-      setToastMessage('❌ Error al actualizar estado');
+      setToastMessage('Error al actualizar estado');
       setToastType('error');
       setToastVisible(true);
       console.error('Error updating task status:', error);
@@ -313,8 +313,8 @@ export default function KanbanScreen({ navigation }) {
                 <Ionicons name="time-outline" size={12} color={statusAgeColor} />
                 <Text style={[styles.statusAgeText, { color: statusAgeColor }]}>
                   {daysInStatus === 1 ? 'Hace 1 día' : `Hace ${daysInStatus} días`}
-                  {daysInStatus > 10 && ' ⚠️'}
                 </Text>
+                {daysInStatus > 10 && <Ionicons name="warning" size={12} color={statusAgeColor} />}
               </View>
             )}
           </>
@@ -377,7 +377,7 @@ export default function KanbanScreen({ navigation }) {
     try {
       await updateTask(taskId, { priority });
       hapticMedium();
-      setToastMessage(`✅ Prioridad cambiada a ${priority}`);
+      setToastMessage(`Prioridad cambiada a ${priority}`);
       setToastType('success');
       setToastVisible(true);
       setContextMenu({ visible: false, task: null, position: { x: 0, y: 0 } });
@@ -480,7 +480,7 @@ export default function KanbanScreen({ navigation }) {
                 style={{ opacity: 0.3 }} 
               />
               <Text style={[styles.emptyColumnText, { color: theme.textSecondary }]}>
-                {status.key === 'cerrada' ? '¡Todo listo! 🎉' : 'No hay tareas aquí'}
+                {status.key === 'cerrada' ? '¡Todo listo!' : 'No hay tareas aquí'}
               </Text>
             </View>
           )}

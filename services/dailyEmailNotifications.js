@@ -67,7 +67,7 @@ export async function sendDailyTaskSummary(userEmail, userName, role, department
     });
 
     // Enviar email
-    const subject = `📋 Resumen Diario de Tareas - ${new Date().toLocaleDateString('es-ES', { 
+    const subject = `Resumen Diario de Tareas - ${new Date().toLocaleDateString('es-ES', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -137,7 +137,7 @@ function buildDailySummaryHTML({ userName, overdueTasks, todayTasks, weekTasks, 
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #9F2241 0%, #7A1A32 100%); padding: 30px 20px; text-align: center;">
       <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700;">
-        📋 Resumen Diario de Tareas
+        Resumen Diario de Tareas
       </h1>
       <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
         ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -158,11 +158,11 @@ function buildDailySummaryHTML({ userName, overdueTasks, todayTasks, weekTasks, 
     ${overdueTasks.length > 0 ? `
     <div style="margin: 20px; padding: 20px; background-color: #FEE2E2; border-left: 4px solid #DC2626; border-radius: 8px;">
       <h2 style="margin: 0 0 15px 0; color: #DC2626; font-size: 18px; display: flex; align-items: center;">
-        🚨 Tareas Vencidas (${overdueTasks.length})
+        ⚠ Tareas Vencidas (${overdueTasks.length})
       </h2>
       ${renderTaskList(overdueTasks)}
       <p style="margin: 15px 0 0 0; padding: 12px; background-color: #FFFFFF; border-radius: 6px; font-size: 13px; color: #991B1B;">
-        <strong>⚠️ Acción requerida:</strong> Estas tareas requieren atención inmediata.
+        <strong>⚠ Acción requerida:</strong> Estas tareas requieren atención inmediata.
       </p>
     </div>
     ` : ''}
@@ -171,14 +171,14 @@ function buildDailySummaryHTML({ userName, overdueTasks, todayTasks, weekTasks, 
     ${todayTasks.length > 0 ? `
     <div style="margin: 20px; padding: 20px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px;">
       <h2 style="margin: 0 0 15px 0; color: #D97706; font-size: 18px;">
-        📅 Tareas para Hoy (${todayTasks.length})
+        Tareas para Hoy (${todayTasks.length})
       </h2>
       ${renderTaskList(todayTasks)}
     </div>
     ` : `
     <div style="margin: 20px; padding: 20px; background-color: #ECFDF5; border-left: 4px solid #10B981; border-radius: 8px;">
       <p style="margin: 0; color: #059669; font-size: 15px;">
-        ✅ <strong>¡Excelente!</strong> No tienes tareas pendientes para hoy.
+        <strong>¡Excelente!</strong> No tienes tareas pendientes para hoy.
       </p>
     </div>
     `}
@@ -197,7 +197,7 @@ function buildDailySummaryHTML({ userName, overdueTasks, todayTasks, weekTasks, 
     ${completedYesterday.length > 0 ? `
     <div style="margin: 20px; padding: 20px; background-color: #F0FDF4; border-left: 4px solid #22C55E; border-radius: 8px;">
       <h2 style="margin: 0 0 10px 0; color: #16A34A; font-size: 16px;">
-        ✅ Completadas Ayer (${completedYesterday.length})
+        Completadas Ayer (${completedYesterday.length})
       </h2>
       <p style="margin: 0; font-size: 14px; color: #166534;">
         ¡Buen trabajo! Completaste ${completedYesterday.length} ${completedYesterday.length === 1 ? 'tarea' : 'tareas'} ayer.
@@ -207,7 +207,7 @@ function buildDailySummaryHTML({ userName, overdueTasks, todayTasks, weekTasks, 
 
     <!-- Footer con estadísticas -->
     <div style="margin: 20px; padding: 20px; background-color: #F9FAFB; border-radius: 8px; text-align: center;">
-      <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px;">📊 Resumen Rápido</h3>
+      <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px;">Resumen Rápido</h3>
       <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
         <div style="min-width: 100px; margin: 10px;">
           <div style="font-size: 28px; font-weight: 700; color: #DC2626;">${overdueTasks.length}</div>

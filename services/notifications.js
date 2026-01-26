@@ -304,7 +304,7 @@ export async function scheduleMultipleDailyOverdueNotifications(overdueTasks) {
 
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `🚨 ${count} ${count === 1 ? 'Tarea Vencida' : 'Tareas Vencidas'}`,
+          title: `⚠ ${count} ${count === 1 ? 'Tarea Vencida' : 'Tareas Vencidas'}`,
           body: `Tienes ${count} ${count === 1 ? 'tarea pendiente vencida' : 'tareas pendientes vencidas'}:\\n${taskTitles}${moreText}`,
           data: { 
             type: 'overdue_multiple',

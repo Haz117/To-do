@@ -752,7 +752,7 @@ export default function TaskDetailScreen({ route, navigation }) {
                         ...session, 
                         userEmail: user.session.email 
                       });
-                      setToastMessage('✅ Sesión Pomodoro completada!');
+                      setToastMessage('Sesión Pomodoro completada!');
                       setToastType('success');
                       setToastVisible(true);
                     }

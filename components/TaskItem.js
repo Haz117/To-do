@@ -174,7 +174,8 @@ const TaskItem = memo(function TaskItem({
                 {remaining <= 0 && task.status !== 'cerrada' && (
                   <View style={styles.overdueBadgeContainer}>
                     <PulsingDot size={8} color="#DC2626" />
-                    <Text style={styles.overdueBadge}>🚨 VENCIDA</Text>
+                    <Ionicons name="alert-circle" size={14} color="#DC2626" />
+                    <Text style={styles.overdueBadge}>VENCIDA</Text>
                   </View>
                 )}
                 {!(remaining <= 0 && task.status !== 'cerrada') && (
