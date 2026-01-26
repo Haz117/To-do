@@ -188,11 +188,20 @@ export default function KanbanScreen({ navigation }) {
     setDraggingTask(null);
   };
 
-  // Componente de tarjeta arrastrable
+  // Componente de tarjeta arrastrable con mejoras visuales
   const DraggableCard = ({ item, status }) => {
     const isOverdue = isTaskOverdue(item);
     const priorityColors = { alta: '#EF4444', media: '#F59E0B', baja: '#10B981' };
     const priorityColor = priorityColors[item.priority] || '#94A3B8';
+    
+    // Calcular días en el estado actual
+    const daysInStatus = item.statusChangedAt ? 
+      Math.floor((Date.now() - item.statusChangedAt) / (1000 * 60 * 60 * 24)) : 0;
+    const statusAgeColor = daysInStatus > 10 ? '#DC2626' : daysInStatus > 5 ? '#F59E0B' : theme.textSecondary;
+    
+    // Borde según prioridad
+    const borderColor = item.priority === 'alta' ? '#EF4444' : 
+                        item.priority === 'media' ? '#F59E0B' : theme.border;
     
     return (
       <SpringCard
@@ -206,7 +215,13 @@ export default function KanbanScreen({ navigation }) {
         }}
         style={[
           styles.card,
-          { backgroundColor: theme.cardBackground, borderColor: theme.border },
+          { 
+            backgroundColor: theme.cardBackground, 
+            borderColor: borderColor,
+            borderWidth: item.priority === 'alta' ? 2 : 1,
+            borderLeftWidth: 4,
+            borderLeftColor: priorityColor
+          },
           draggingTask?.id === item.id && styles.cardDragging,
           compactView && { paddingVertical: 8, paddingHorizontal: 12 }
         ]}
@@ -228,6 +243,8 @@ export default function KanbanScreen({ navigation }) {
               <Text style={styles.priorityChipText}>
                 {item.priority === 'alta' ? 'URGENTE' : item.priority === 'media' ? 'MEDIA' : 'BAJA'}
               </Text>
+              {/* Pulsación para prioridad alta */}
+              {item.priority === 'alta' && <PulsingDot size={6} color="#FFFFFF" />}
             </View>
             
             {isOverdue && (
@@ -242,7 +259,10 @@ export default function KanbanScreen({ navigation }) {
         {/* Título con indicador de prioridad en vista compacta */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {compactView && (
-            <View style={[styles.compactPriorityDot, { backgroundColor: priorityColor }]} />
+            <>
+              <View style={[styles.compactPriorityDot, { backgroundColor: priorityColor }]} />
+              {item.priority === 'alta' && <PulsingDot size={4} color={priorityColor} />}
+            </>
           )}
           <Text 
             style={[styles.cardTitle, { color: theme.text }]} 
@@ -257,21 +277,34 @@ export default function KanbanScreen({ navigation }) {
         
         {/* Meta información - Solo en vista expandida */}
         {!compactView && (
-          <View style={styles.cardInfoGrid}>
-            <View style={[styles.cardInfoItem, { backgroundColor: theme.surface }]}>
-              <Ionicons name="person" size={14} color={status.color} />
-              <Text style={[styles.cardInfoText, { color: theme.textSecondary }]} numberOfLines={1}>
-                {item.assignedTo || 'Sin asignar'}
-              </Text>
+          <>
+            <View style={styles.cardInfoGrid}>
+              <View style={[styles.cardInfoItem, { backgroundColor: theme.surface }]}>
+                <Ionicons name="person" size={14} color={status.color} />
+                <Text style={[styles.cardInfoText, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {item.assignedTo || 'Sin asignar'}
+                </Text>
+              </View>
+              
+              <View style={[styles.cardInfoItem, { backgroundColor: theme.surface }]}>
+                <Ionicons name="calendar-outline" size={14} color={status.color} />
+                <Text style={[styles.cardInfoText, { color: theme.textSecondary }]}>
+                  {new Date(item.dueAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                </Text>
+              </View>
             </View>
             
-            <View style={[styles.cardInfoItem, { backgroundColor: theme.surface }]}>
-              <Ionicons name="calendar-outline" size={14} color={status.color} />
-              <Text style={[styles.cardInfoText, { color: theme.textSecondary }]}>
-                {new Date(item.dueAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
-          </View>
+            {/* Indicador de días en estado actual */}
+            {daysInStatus > 0 && (
+              <View style={[styles.statusAgeIndicator, { backgroundColor: theme.surface }]}>
+                <Ionicons name="time-outline" size={12} color={statusAgeColor} />
+                <Text style={[styles.statusAgeText, { color: statusAgeColor }]}>
+                  {daysInStatus === 1 ? 'Hace 1 día' : `Hace ${daysInStatus} días`}
+                  {daysInStatus > 10 && ' ⚠️'}
+                </Text>
+              </View>
+            )}
+          </>
         )}
         
         {/* Botones de cambio de estado */}
@@ -358,6 +391,12 @@ export default function KanbanScreen({ navigation }) {
   const renderColumn = (status) => {
     const { byStatus, filtered, sorted } = tasksByStatus[status.key] || { byStatus: [], filtered: [], sorted: [] };
     const completionRate = byStatus.length > 0 ? (filtered.length / byStatus.length) * 100 : 0;
+    
+    // Calcular tareas vencidas en esta columna
+    const overdueTasks = sorted.filter(task => task.dueAt < Date.now()).length;
+    
+    // Calcular tareas de alta prioridad
+    const highPriorityTasks = sorted.filter(task => task.priority === 'alta').length;
 
     return (
       <View key={status.key} style={[styles.column, { backgroundColor: theme.surface }]}>
@@ -368,16 +407,70 @@ export default function KanbanScreen({ navigation }) {
             </View>
             <Text style={[styles.columnTitle, { color: theme.text }]}>{status.label}</Text>
           </View>
-          <View style={[styles.columnCount, { backgroundColor: status.color }]}>
-            <Text style={styles.columnCountText}>{sorted.length}</Text>
+          
+          {/* Badges y estadísticas mejoradas */}
+          <View style={styles.columnBadges}>
+            {/* Contador principal */}
+            <View style={[styles.columnCount, { backgroundColor: status.color }]}>
+              <Text style={styles.columnCountText}>{sorted.length}</Text>
+            </View>
+            
+            {/* Badge de vencidas si hay */}
+            {overdueTasks > 0 && (
+              <View style={[styles.overdueColumnBadge, { backgroundColor: '#DC2626' }]}>
+                <Ionicons name="alert-circle" size={12} color="#FFFFFF" />
+                <Text style={styles.columnCountText}>{overdueTasks}</Text>
+              </View>
+            )}
+            
+            {/* Badge de alta prioridad */}
+            {highPriorityTasks > 0 && (
+              <View style={[styles.priorityColumnBadge, { backgroundColor: '#F59E0B' }]}>
+                <Ionicons name="flag" size={12} color="#FFFFFF" />
+                <Text style={styles.columnCountText}>{highPriorityTasks}</Text>
+              </View>
+            )}
           </View>
         </View>
+        
+        {/* Barra de progreso */}
+        {byStatus.length > 0 && (
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBarBg, { backgroundColor: theme.border }]}>
+              <Animated.View 
+                style={[
+                  styles.progressBarFill, 
+                  { 
+                    backgroundColor: status.color,
+                    width: `${completionRate}%`
+                  }
+                ]}
+              />
+            </View>
+            <Text style={[styles.progressText, { color: theme.textSecondary }]}>
+              {Math.round(completionRate)}% ({sorted.length}/{byStatus.length})
+            </Text>
+          </View>
+        )}
 
         <FlatList
           data={sorted}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <DraggableCard item={item} status={status} />}
           contentContainerStyle={{ paddingBottom: 12 }}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyColumnState}>
+              <Ionicons 
+                name={status.key === 'cerrada' ? 'checkmark-circle-outline' : 'document-text-outline'} 
+                size={48} 
+                color={theme.textSecondary} 
+                style={{ opacity: 0.3 }} 
+              />
+              <Text style={[styles.emptyColumnText, { color: theme.textSecondary }]}>
+                {status.key === 'cerrada' ? '¡Todo listo! 🎉' : 'No hay tareas aquí'}
+              </Text>
+            </View>
+          )}
         />
       </View>
     );
@@ -445,6 +538,126 @@ export default function KanbanScreen({ navigation }) {
           currentUserEmail={currentUser?.email}
           role={currentUser?.role}
         />
+        
+        {/* Chips de filtro rápido mejorados */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.quickFiltersContainer}
+        >
+          {/* Filtro: Todas */}
+          <TouchableOpacity
+            onPress={() => {
+              setFilters({ searchText: '', area: '', responsible: '', priority: '', overdue: false });
+              hapticLight();
+            }}
+            style={[
+              styles.quickFilterChip,
+              { 
+                backgroundColor: !filters.area && !filters.priority && !filters.overdue ? theme.primary : theme.surface,
+                borderColor: !filters.area && !filters.priority && !filters.overdue ? theme.primary : theme.border
+              }
+            ]}
+          >
+            <Ionicons 
+              name="grid-outline" 
+              size={16} 
+              color={!filters.area && !filters.priority && !filters.overdue ? '#FFFFFF' : theme.text} 
+            />
+            <Text style={[
+              styles.quickFilterText, 
+              { color: !filters.area && !filters.priority && !filters.overdue ? '#FFFFFF' : theme.text }
+            ]}>
+              Todas ({tasks.length})
+            </Text>
+          </TouchableOpacity>
+
+          {/* Filtro: Vencidas */}
+          <TouchableOpacity
+            onPress={() => {
+              setFilters({ ...filters, overdue: !filters.overdue });
+              hapticLight();
+            }}
+            style={[
+              styles.quickFilterChip,
+              { 
+                backgroundColor: filters.overdue ? '#DC2626' : theme.surface,
+                borderColor: filters.overdue ? '#DC2626' : theme.border
+              }
+            ]}
+          >
+            <Ionicons 
+              name="alert-circle" 
+              size={16} 
+              color={filters.overdue ? '#FFFFFF' : '#DC2626'} 
+            />
+            <Text style={[
+              styles.quickFilterText, 
+              { color: filters.overdue ? '#FFFFFF' : '#DC2626' }
+            ]}>
+              Vencidas ({tasks.filter(t => t.dueAt < Date.now() && t.status !== 'cerrada').length})
+            </Text>
+          </TouchableOpacity>
+
+          {/* Filtro: Alta Prioridad */}
+          <TouchableOpacity
+            onPress={() => {
+              setFilters({ ...filters, priority: filters.priority === 'alta' ? '' : 'alta' });
+              hapticLight();
+            }}
+            style={[
+              styles.quickFilterChip,
+              { 
+                backgroundColor: filters.priority === 'alta' ? '#EF4444' : theme.surface,
+                borderColor: filters.priority === 'alta' ? '#EF4444' : theme.border
+              }
+            ]}
+          >
+            <Ionicons 
+              name="flash" 
+              size={16} 
+              color={filters.priority === 'alta' ? '#FFFFFF' : '#EF4444'} 
+            />
+            <Text style={[
+              styles.quickFilterText, 
+              { color: filters.priority === 'alta' ? '#FFFFFF' : '#EF4444' }
+            ]}>
+              Urgente ({tasks.filter(t => t.priority === 'alta').length})
+            </Text>
+          </TouchableOpacity>
+
+          {/* Filtro: Mis tareas */}
+          {currentUser && (
+            <TouchableOpacity
+              onPress={() => {
+                setFilters({ 
+                  ...filters, 
+                  responsible: filters.responsible === currentUser.email ? '' : currentUser.email 
+                });
+                hapticLight();
+              }}
+              style={[
+                styles.quickFilterChip,
+                { 
+                  backgroundColor: filters.responsible === currentUser.email ? '#2196F3' : theme.surface,
+                  borderColor: filters.responsible === currentUser.email ? '#2196F3' : theme.border
+                }
+              ]}
+            >
+              <Ionicons 
+                name="person" 
+                size={16} 
+                color={filters.responsible === currentUser.email ? '#FFFFFF' : '#2196F3'} 
+              />
+              <Text style={[
+                styles.quickFilterText, 
+                { color: filters.responsible === currentUser.email ? '#FFFFFF' : '#2196F3' }
+              ]}>
+                Mis tareas ({tasks.filter(t => t.assignedTo === currentUser.email).length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
         
         <FilterBar onFilterChange={setFilters} />
         <ScrollView 
@@ -796,6 +1009,111 @@ const createStyles = (theme, isDark, columnWidth = 300) => StyleSheet.create({
     shadowRadius: 4,
     elevation: 3
   },
+  columnBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  overdueColumnBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  priorityColumnBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  progressBarContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 6
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden'
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2
+  },
+  progressText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  emptyColumnState: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12
+  },
+  emptyColumnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    opacity: 0.6
+  },
+  statusAgeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  statusAgeText: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  quickFiltersContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    flexDirection: 'row'
+  },
+  quickFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  quickFilterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3
+  },
   columnCountText: {
     fontSize: 14,
     fontWeight: '900',
@@ -812,13 +1130,18 @@ const createStyles = (theme, isDark, columnWidth = 300) => StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: isDark ? 0.2 : 0.12,
     shadowRadius: 10,
-    elevation: 4
+    elevation: 4,
+    transition: 'all 0.3s ease'
   },
   cardDragging: {
-    opacity: 0.8,
-    transform: [{ scale: 1.03 }],
-    shadowOpacity: 0.25,
-    shadowRadius: 15
+    opacity: 0.95,
+    transform: [{ scale: 1.08 }, { rotate: '2deg' }],
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+    borderWidth: 3,
+    borderColor: theme.primary
   },
   cardTopRow: {
     flexDirection: 'row',

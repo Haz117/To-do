@@ -253,6 +253,81 @@ export async function scheduleOverdueTasksNotification(overdueTasks) {
   }
 }
 
+/**
+ * Programa notificaciones múltiples al día para tareas vencidas
+ * Horarios: 9 AM, 2 PM, 6 PM
+ */
+export async function scheduleMultipleDailyOverdueNotifications(overdueTasks) {
+  // En web no programar notificaciones
+  if (Platform.OS === 'web') {
+    return [];
+  }
+  
+  if (!overdueTasks || overdueTasks.length === 0) {
+    return [];
+  }
+  
+  try {
+    const granted = await ensurePermissions();
+    if (!granted) {
+      return [];
+    }
+
+    // Cancelar notificaciones previas de vencidas
+    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of allScheduled) {
+      if (notif.content.data?.type === 'overdue_daily' || notif.content.data?.type === 'overdue_multiple') {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const count = overdueTasks.length;
+    const taskTitles = overdueTasks.slice(0, 3).map(t => `• ${t.title}`).join('\\n');
+    const moreText = count > 3 ? `\\n... y ${count - 3} más` : '';
+
+    const ids = [];
+    const hours = [9, 14, 18]; // 9 AM, 2 PM, 6 PM
+    const now = new Date();
+
+    for (const hour of hours) {
+      const triggerTime = new Date();
+      triggerTime.setHours(hour, 0, 0, 0);
+      
+      // Si ya pasó la hora de hoy, programar para mañana
+      if (triggerTime <= now) {
+        triggerTime.setDate(triggerTime.getDate() + 1);
+      }
+
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🚨 ${count} ${count === 1 ? 'Tarea Vencida' : 'Tareas Vencidas'}`,
+          body: `Tienes ${count} ${count === 1 ? 'tarea pendiente vencida' : 'tareas pendientes vencidas'}:\\n${taskTitles}${moreText}`,
+          data: { 
+            type: 'overdue_multiple',
+            taskCount: count,
+            taskIds: overdueTasks.map(t => t.id),
+            hour
+          },
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          color: '#DC2626',
+          badge: count,
+          vibrate: [0, 250, 250, 250], // Vibración más insistente
+        },
+        trigger: triggerTime
+      });
+
+      ids.push(id);
+      console.log(`Notificación de vencidas programada para ${triggerTime.toLocaleString()}`);
+    }
+
+    return ids;
+  } catch (e) {
+    console.error('Error programando notificaciones múltiples de vencidas:', e);
+    return [];
+  }
+}
+
 export async function cancelNotification(notificationId) {
   // En web no hay notificaciones que cancelar
   if (Platform.OS === 'web') {

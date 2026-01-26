@@ -35,6 +35,7 @@ let globalNavigationRef = null;
 function MainTabs({ onLogout }) {
   const { theme, isDark } = useTheme();
   const [currentUser, setCurrentUser] = useState(null);
+  const [overdueCount, setOverdueCount] = useState(0);
 
   useEffect(() => {
     getCurrentSession().then((result) => {
@@ -42,7 +43,36 @@ function MainTabs({ onLogout }) {
         setCurrentUser(result.session);
       }
     });
-  }, []);
+
+    // Suscribirse a tareas para actualizar contador de vencidas
+    const unsubscribe = require('./services/tasks').subscribeToTasks((tasks) => {
+      if (currentUser) {
+        let userOverdue = [];
+        if (currentUser.role === 'admin') {
+          userOverdue = tasks.filter(t => t.dueAt < Date.now() && t.status !== 'cerrada');
+        } else {
+          userOverdue = tasks.filter(t => 
+            t.dueAt < Date.now() && 
+            t.status !== 'cerrada' && 
+            t.assignedTo === currentUser.email
+          );
+        }
+        setOverdueCount(userOverdue.length);
+        
+        // Actualizar badge de app
+        if (typeof require !== 'undefined') {
+          const Notifications = require('expo-notifications');
+          Notifications.default?.setBadgeCountAsync(userOverdue.length).catch(() => {});
+        }
+      }
+    });
+
+    return () => {
+      if (unsubscribe && typeof unsubscribe.then === 'function') {
+        unsubscribe.then(unsub => unsub && unsub());
+      }
+    };
+  }, [currentUser]);
 
   const isAdmin = currentUser?.role === 'admin';
   const isJefeOrAdmin = currentUser?.role === 'admin' || currentUser?.role === 'jefe';
@@ -144,7 +174,11 @@ function MainTabs({ onLogout }) {
       
       <Tab.Screen 
         name="Inbox" 
-        options={{ title: 'Bandeja' }} 
+        options={{ 
+          title: 'Bandeja',
+          tabBarBadge: overdueCount > 0 ? overdueCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#DC2626', color: '#FFFFFF' }
+        }} 
         component={MyInboxScreen} 
       />
       

@@ -13,7 +13,7 @@ import { getCurrentSession } from '../services/authFirestore';
 import { hapticMedium } from '../utils/haptics';
 import Toast from '../components/Toast';
 import { useTheme } from '../contexts/ThemeContext';
-import { scheduleOverdueTasksNotification } from '../services/notifications';
+import { scheduleOverdueTasksNotification, scheduleMultipleDailyOverdueNotifications } from '../services/notifications';
 import OverdueAlert from '../components/OverdueAlert';
 
 export default function MyInboxScreen({ navigation }) {
@@ -79,7 +79,10 @@ export default function MyInboxScreen({ navigation }) {
   // Programar notificación diaria de tareas vencidas
   useEffect(() => {
     if (overdueCount > 0) {
+      // Notificación diaria a las 9 AM
       scheduleOverdueTasksNotification(overdueTasks);
+      // Notificaciones múltiples (9 AM, 2 PM, 6 PM)
+      scheduleMultipleDailyOverdueNotifications(overdueTasks);
     }
   }, [overdueCount]);
 
