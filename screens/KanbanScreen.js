@@ -319,8 +319,8 @@ export default function KanbanScreen({ navigation }) {
           </>
         )}
         
-        {/* Botones de cambio de estado */}
-        {currentUserRole === 'operativo' && !compactView && (
+        {/* Botones de cambio de estado - Disponible para todos los roles */}
+        {!compactView && (
           <TaskStatusButtons
             currentStatus={item.status}
             taskId={item.id}
