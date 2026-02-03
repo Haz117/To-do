@@ -61,7 +61,6 @@ export async function exportTasksToCSV(tasks, filename = 'tareas') {
       return { success: true, message: 'Archivo compartido', fileUri };
     }
   } catch (error) {
-    console.error('Error exportando CSV:', error);
     return { success: false, error: error.message };
   }
 }
@@ -98,7 +97,6 @@ export async function exportStatsToCSV(stats, tasksByArea) {
     
     return await exportCSVContent(csvContent, filename);
   } catch (error) {
-    console.error('Error exportando estadísticas:', error);
     return { success: false, error: error.message };
   }
 }

@@ -31,7 +31,6 @@ function encrypt(text) {
     const result = iv.toString('hex') + ':' + encrypted;
     return Buffer.from(result).toString('base64');
   } catch (error) {
-    console.error('[ENCRYPT ERROR]', error);
     throw new Error('Error al encriptar');
   }
 }
@@ -66,7 +65,6 @@ function decrypt(encryptedText) {
     
     return decrypted;
   } catch (error) {
-    console.error('[DECRYPT ERROR]', error);
     throw new Error('Error al desencriptar');
   }
 }
@@ -123,7 +121,6 @@ function getCredentials(role) {
       password: decrypt(ENCRYPTED_CREDENTIALS[role].password)
     };
   } catch (error) {
-    console.error('[GET CREDENTIALS ERROR]', error);
     throw error;
   }
 }
@@ -144,7 +141,6 @@ function validateCredentials(email, password) {
     }
     return false;
   } catch (error) {
-    console.error('[VALIDATE CREDENTIALS ERROR]', error);
     return false;
   }
 }

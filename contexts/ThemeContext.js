@@ -46,7 +46,7 @@ export const ThemeProvider = ({ children }) => {
         setIsDark(savedTheme === 'dark');
       }
     } catch (error) {
-      console.error('Error cargando tema:', error);
+      // Error loading theme
     }
   };
 
@@ -56,7 +56,7 @@ export const ThemeProvider = ({ children }) => {
       setIsDark(newTheme);
       await AsyncStorage.setItem('appTheme', newTheme ? 'dark' : 'light');
     } catch (error) {
-      console.error('Error guardando tema:', error);
+      // Error saving theme
     }
   };
 

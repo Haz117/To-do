@@ -32,7 +32,7 @@ if (Platform.OS === 'web') {
     Analytics = require('@vercel/analytics/react').Analytics;
     SpeedInsights = require('@vercel/speed-insights/react').SpeedInsights;
   } catch (e) {
-    console.log('Vercel analytics not available');
+    // Vercel analytics not available
   }
 }
 
@@ -125,16 +125,11 @@ function MainTabs({ onLogout }) {
           </View>
           <TouchableOpacity
             onPress={() => {
-              console.log('[LOGOUT] BOTÓN SALIR PRESIONADO');
-              console.log('[LOGOUT] onLogout existe?', typeof onLogout);
-              
               if (!onLogout) {
-                console.error('[ERROR] onLogout no está definido!');
                 alert('Error: No se puede cerrar sesión');
                 return;
               }
               
-              console.log('[SUCCESS] Llamando onLogout directamente...');
               onLogout();
             }}
             style={styles.logoutBtn}
@@ -268,18 +263,13 @@ export default function App() {
   // Función de logout que maneja todo el proceso
   const handleLogout = async () => {
     try {
-      console.log('[LOGOUT] Iniciando proceso de cierre de sesión');
-      
       // Limpiar sesión de AsyncStorage
       await logoutUser();
-      console.log('[SUCCESS] LOGOUT: Sesión eliminada de AsyncStorage');
       
       // Forzar actualización completa
       setIsAuthenticated(false);
       setIsLoading(false);
       setForceUpdate(prev => prev + 1);
-      
-      console.log('[SUCCESS] LOGOUT: Estado actualizado, regresando a Login');
       
       // Toast de confirmación
       Toast.show({
@@ -290,7 +280,6 @@ export default function App() {
       });
       
     } catch (error) {
-      console.error('[ERROR] LOGOUT ERROR:', error);
       // Forzar logout incluso con error
       setIsAuthenticated(false);
       setIsLoading(false);
@@ -310,7 +299,6 @@ export default function App() {
     // Timeout de seguridad
     const timeout = setTimeout(() => {
       if (mounted) {
-        console.log('⏱️ Timeout alcanzado');
         setIsLoading(false);
       }
     }, 2000);
@@ -368,7 +356,6 @@ export default function App() {
                   <LoginScreen 
                     {...props} 
                     onLogin={() => {
-                      console.log('[SUCCESS] LOGIN: Autenticación exitosa');
                       setIsAuthenticated(true);
                       setForceUpdate(prev => prev + 1);
                     }} 

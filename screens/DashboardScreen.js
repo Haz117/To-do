@@ -50,7 +50,7 @@ export default function DashboardScreen({ navigation }) {
         if (performersRes.success) setPerformers(performersRes.performers);
       }
     } catch (error) {
-      console.error('Error cargando dashboard:', error);
+      // Error silencioso
     } finally {
       setLoading(false);
       setRefreshing(false);

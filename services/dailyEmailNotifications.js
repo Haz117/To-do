@@ -52,7 +52,6 @@ export async function sendDailyTaskSummary(userEmail, userName, role, department
 
     // No enviar si no hay nada relevante
     if (overdueTasks.length === 0 && todayTasks.length === 0 && weekTasks.length === 0) {
-      console.log('No hay tareas relevantes para email diario');
       return null;
     }
 
@@ -80,10 +79,8 @@ export async function sendDailyTaskSummary(userEmail, userName, role, department
       html: emailHTML
     });
 
-    console.log(`✅ Email diario enviado a ${userEmail}`);
     return true;
   } catch (error) {
-    console.error('Error enviando email diario:', error);
     return false;
   }
 }
@@ -264,10 +261,8 @@ export async function sendDailyEmailsToAllUsers() {
     });
 
     await Promise.allSettled(promises);
-    console.log('✅ Emails diarios enviados a todos los usuarios');
     return true;
   } catch (error) {
-    console.error('Error enviando emails diarios a usuarios:', error);
     return false;
   }
 }

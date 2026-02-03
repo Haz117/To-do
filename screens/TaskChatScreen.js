@@ -57,7 +57,6 @@ export default function TaskChatScreen({ route, navigation }) {
           }
         }
       } catch (error) {
-        console.error('Error cargando tarea:', error);
         setHasAccess(false);
       }
     } else {
@@ -77,7 +76,9 @@ export default function TaskChatScreen({ route, navigation }) {
       const arr = [];
       snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
       setMessages(arr);
-    }, (err) => console.warn('Error listener chat', err));
+    }, (err) => {
+      // Error silencioso
+    });
 
     return () => unsub();
   }, [taskId, hasAccess]);
@@ -100,7 +101,7 @@ export default function TaskChatScreen({ route, navigation }) {
           hasUnreadMessages: true
         });
       } catch (updateError) {
-        console.warn('Error actualizando timestamp del mensaje:', updateError);
+        // Error silencioso
       }
       
       // 3. Notificar a otros usuarios de la tarea
@@ -116,14 +117,13 @@ export default function TaskChatScreen({ route, navigation }) {
           );
         }
       } catch (notifyError) {
-        console.warn('Error enviando notificación:', notifyError);
+        // Error silencioso
       }
       
       setText('');
       // scroll opcional
       setTimeout(() => flatRef.current?.scrollToEnd?.({ animated: true }), 200);
     } catch (e) {
-      console.warn('Error enviando mensaje', e);
       Alert.alert('Error', 'No se pudo enviar el mensaje. Intenta de nuevo.');
     }
   };

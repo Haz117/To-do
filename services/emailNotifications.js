@@ -31,15 +31,12 @@ async function sendEmail({ to, subject, html }) {
     });
 
     if (response.ok) {
-      console.log('✅ Email enviado a:', to);
       return { success: true };
     } else {
       const error = await response.text();
-      console.error('❌ Error enviando email:', error);
       return { success: false, error };
     }
   } catch (error) {
-    console.error('❌ Error en sendEmail:', error);
     return { success: false, error: error.message };
   }
 }

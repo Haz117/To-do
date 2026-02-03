@@ -23,14 +23,11 @@ async function sendEmail({ to, subject, html, type = 'notification' }) {
     const data = await response.json();
 
     if (response.ok) {
-      console.log('[SUCCESS] Email enviado a:', to);
       return { success: true, data };
     } else {
-      console.error('[ERROR] Error enviando email:', data);
       return { success: false, error: data.error };
     }
   } catch (error) {
-    console.error('[ERROR] Error en sendEmail:', error);
     return { success: false, error: error.message };
   }
 }

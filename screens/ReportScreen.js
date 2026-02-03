@@ -92,7 +92,7 @@ export default function ReportScreen({ navigation }) {
       setEstimatedVsReal(estimated);
       setPomodoroStats(pomodoro);
     } catch (error) {
-      console.error('Error cargando métricas avanzadas:', error);
+      // Error silencioso
     } finally {
       setLoadingAdvanced(false);
     }
@@ -337,7 +337,6 @@ export default function ReportScreen({ navigation }) {
                 setToastType('success');
                 setToastVisible(true);
               } catch (error) {
-                console.error('Error eliminando tarea:', error);
                 setToastMessage('Error al eliminar tarea');
                 setToastType('error');
                 setToastVisible(true);

@@ -216,7 +216,6 @@ export default function MyInboxScreen({ navigation }) {
       setToastMessage('Error al marcar como cerrada: ' + e.message);
       setToastType('error');
       setToastVisible(true);
-      console.warn('Error marcando cerrada', e);
     }
   };
 
@@ -252,7 +251,6 @@ export default function MyInboxScreen({ navigation }) {
         position: 'top',
         visibilityTime: 3000,
       });
-      console.warn('Error posponiendo tarea', e);
     }
   };
 
@@ -260,7 +258,7 @@ export default function MyInboxScreen({ navigation }) {
     try {
       await deleteTaskFirebase(taskId);
     } catch (error) {
-      console.warn('Error eliminando tarea', error);
+      // Error silencioso
     }
   };
 

@@ -169,7 +169,6 @@ export default function KanbanScreen({ navigation }) {
       setToastMessage('Error al actualizar estado');
       setToastType('error');
       setToastVisible(true);
-      console.error('Error updating task status:', error);
     }
   }, []);
 
@@ -382,7 +381,7 @@ export default function KanbanScreen({ navigation }) {
       setToastVisible(true);
       setContextMenu({ visible: false, task: null, position: { x: 0, y: 0 } });
     } catch (error) {
-      console.error('Error cambiando prioridad:', error);
+      // Error silencioso
     }
   };
 

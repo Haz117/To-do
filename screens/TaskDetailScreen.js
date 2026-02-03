@@ -391,7 +391,6 @@ export default function TaskDetailScreen({ route, navigation }) {
       clearInterval(progressInterval);
       setIsSaving(false);
       setSaveProgress(null);
-      console.error('Error guardando tarea:', e);
       
       // Mostrar toast de error
       setToastMessage(`Error al guardar: ${e.message || 'Error desconocido'}`);
@@ -418,7 +417,6 @@ export default function TaskDetailScreen({ route, navigation }) {
               setToastVisible(true);
               setTimeout(() => navigation.goBack(), 1000);
             } catch (error) {
-              console.error('Error al eliminar tarea:', error);
               setToastMessage('Error al eliminar la tarea');
               setToastType('error');
               setToastVisible(true);

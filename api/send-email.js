@@ -28,7 +28,6 @@ export default async function handler(req, res) {
     const FROM_NAME = process.env.FROM_NAME || 'Sistema de Tareas';
 
     if (!SENDGRID_API_KEY) {
-      console.error('[ERROR] SENDGRID_API_KEY not configured');
       return res.status(500).json({ error: 'Email service not configured' });
     }
 
@@ -56,21 +55,18 @@ export default async function handler(req, res) {
     });
 
     if (response.ok) {
-      console.log('[SUCCESS] Email sent to:', to, '| Type:', type);
       return res.status(200).json({ 
         success: true, 
         message: 'Email sent successfully' 
       });
     } else {
       const errorText = await response.text();
-      console.error('[ERROR] SendGrid error:', errorText);
       return res.status(500).json({ 
         error: 'Failed to send email',
         details: errorText 
       });
     }
   } catch (error) {
-    console.error('[ERROR] Error in send-email:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       message: error.message 

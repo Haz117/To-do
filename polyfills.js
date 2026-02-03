@@ -39,6 +39,4 @@ if (typeof global._scheduleOnJS === 'undefined') {
   };
 }
 
-console.log('✅ Polyfills cargados correctamente');
-
 export {};

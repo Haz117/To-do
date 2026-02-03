@@ -20,7 +20,7 @@ const firebaseConfig = {
 };
 
 if (!firebaseConfig.apiKey) {
-  console.error('❌ Firebase no configurado. La app puede no funcionar correctamente.');
+  // Firebase no configurado
 }
 
 // Inicializar Firebase App (solo si no existe)

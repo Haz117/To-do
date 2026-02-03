@@ -44,7 +44,6 @@ export const registerUser = async (email, password, displayName, role = 'operati
       userData: { email, displayName, role }
     };
   } catch (error) {
-    console.error('Error en registerUser:', error);
     return { success: false, error: error.message };
   }
 };
@@ -53,32 +52,24 @@ export const registerUser = async (email, password, displayName, role = 'operati
 export const loginUser = async (email, password) => {
   try {
     const normalizedEmail = email.toLowerCase();
-    console.log('[AUTH] Intentando login con:', normalizedEmail);
     
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', normalizedEmail));
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
-      console.log('[ERROR] Usuario no encontrado:', normalizedEmail);
       return { success: false, error: 'Usuario no encontrado' };
     }
     
     const userDoc = querySnapshot.docs[0];
     const userData = userDoc.data();
-    console.log('[SUCCESS] Usuario encontrado:', userData.email, '- Rol:', userData.role);
     
     // Verificar contraseña - El hash debe usar el email normalizado
     const hashedPassword = simpleHash(password + normalizedEmail);
-    console.log('[HASH] Hash calculado:', hashedPassword);
-    console.log('[HASH] Hash en BD:', userData.password);
     
     if (userData.password !== hashedPassword) {
-      console.log('[ERROR] Contraseña incorrecta');
       return { success: false, error: 'Contraseña incorrecta' };
     }
-    
-    console.log('[SUCCESS] Contraseña correcta');
     
     // Verificar si está activo
     if (!userData.active) {
@@ -99,7 +90,6 @@ export const loginUser = async (email, password) => {
     
     return { success: true, user: session };
   } catch (error) {
-    console.error('Error en loginUser:', error);
     return { success: false, error: error.message };
   }
 };
@@ -110,7 +100,6 @@ export const logoutUser = async () => {
     await AsyncStorage.removeItem('userSession');
     return { success: true };
   } catch (error) {
-    console.error('Error en logoutUser:', error);
     return { success: false, error: error.message };
   }
 };
@@ -121,18 +110,15 @@ export const getCurrentSession = async () => {
     const sessionData = await AsyncStorage.getItem('userSession');
     if (sessionData) {
       const session = JSON.parse(sessionData);
-      console.log('[SESSION] Sesión encontrada:', session.email);
       return { success: true, session };
     }
-    console.log('ℹ️ No hay sesión activa');
     return { success: false, error: 'No hay sesión activa' };
   } catch (error) {
-    console.error('[ERROR] Error en getCurrentSession:', error);
     // Si hay un error al parsear o leer, limpiamos la sesión corrupta
     try {
       await AsyncStorage.removeItem('userSession');
     } catch (cleanupError) {
-      console.error('Error limpiando sesión corrupta:', cleanupError);
+      // Error silencioso
     }
     return { success: false, error: error.message };
   }
@@ -188,10 +174,8 @@ export const refreshSession = async () => {
 
     await AsyncStorage.setItem('userSession', JSON.stringify(updatedSession));
     
-    console.log('[SESSION] Sesión refrescada:', updatedSession);
     return { success: true, session: updatedSession };
   } catch (error) {
-    console.error('Error refrescando sesión:', error);
     return { success: false, error: error.message };
   }
 };

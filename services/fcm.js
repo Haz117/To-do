@@ -28,7 +28,6 @@ export function configureNotifications() {
  */
 export async function requestPushPermissions() {
   if (!Device.isDevice) {
-    console.warn('⚠️ Push notifications solo funcionan en dispositivos físicos');
     return false;
   }
 
@@ -42,14 +41,11 @@ export async function requestPushPermissions() {
     }
 
     if (finalStatus !== 'granted') {
-      console.warn('⚠️ Permisos de notificaciones denegados');
       return false;
     }
 
-    console.log('[FCM] Permisos de notificaciones otorgados');
     return true;
   } catch (error) {
-    console.error('[FCM] Error solicitando permisos:', error);
     return false;
   }
 }

@@ -3,8 +3,6 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function App() {
-  console.log('🚀 App MINIMA iniciando');
-  
   return (
     <View style={styles.container}>
       <Text style={styles.text}>✅ APP FUNCIONANDO</Text>

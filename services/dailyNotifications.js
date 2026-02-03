@@ -12,8 +12,6 @@ const COLLECTION_NAME = 'tasks';
  * Se debe llamar una vez al día (ej: 8 AM)
  */
 export async function processDailyNotifications(userEmail) {
-  console.log('📧 Procesando notificaciones diarias para:', userEmail);
-  
   try {
     // 1. Procesar tareas recurrentes
     await processRecurringTasks();
@@ -60,14 +58,11 @@ export async function processDailyNotifications(userEmail) {
       await notifyTaskDueSoon(task, userEmail);
     }
     
-    console.log('✅ Emails enviados - Resumen + ' + dueToday.length + ' alertas');
-    
     return {
       success: true,
       summary
     };
   } catch (error) {
-    console.error('❌ Error procesando notificaciones:', error);
     return { success: false, error: error.message };
   }
 }
@@ -77,6 +72,5 @@ export async function processDailyNotifications(userEmail) {
  * Procesa tareas recurrentes y envía resumen diario
  */
 export async function runDailyTasks(userEmail) {
-  console.log('🌅 Ejecutando tareas diarias...');
   return await processDailyNotifications(userEmail);
 }

@@ -37,14 +37,11 @@ export const queueOperation = async (type, data, tempId = null) => {
     queue.push(operation);
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     
-    console.log('📝 Operación agregada a cola offline:', operation);
-    
     // Intentar sincronizar inmediatamente
     syncQueue();
     
     return operation.id;
   } catch (error) {
-    console.error('❌ Error agregando a cola:', error);
     return null;
   }
 };
@@ -57,7 +54,6 @@ export const getQueue = async () => {
     const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
     return queueStr ? JSON.parse(queueStr) : [];
   } catch (error) {
-    console.error('❌ Error leyendo cola:', error);
     return [];
   }
 };
@@ -70,7 +66,7 @@ export const clearQueue = async () => {
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify([]));
     notifySyncListeners({ syncing: false, pendingCount: 0 });
   } catch (error) {
-    console.error('❌ Error limpiando cola:', error);
+    // Error silencioso
   }
 };
 
@@ -88,7 +84,6 @@ export const getPendingCount = async () => {
 export const syncQueue = async (force = false) => {
   // Evitar múltiples sincronizaciones simultáneas
   if (isSyncing && !force) {
-    console.log('⏳ Ya hay una sincronización en progreso');
     return { success: false, reason: 'already_syncing' };
   }
 
@@ -96,7 +91,6 @@ export const syncQueue = async (force = false) => {
     // Verificar conectividad
     const netInfo = await NetInfo.fetch();
     if (!netInfo.isConnected) {
-      console.log('📵 Sin conexión, sincronización pospuesta');
       return { success: false, reason: 'no_connection' };
     }
 
@@ -111,8 +105,6 @@ export const syncQueue = async (force = false) => {
       notifySyncListeners({ syncing: false, pendingCount: 0 });
       return { success: true, synced: 0 };
     }
-
-    console.log(`🔄 Sincronizando ${pendingOps.length} operaciones...`);
 
     let syncedCount = 0;
     let failedOps = [];
@@ -145,13 +137,11 @@ export const syncQueue = async (force = false) => {
           operation.status = 'completed';
           await updateQueueItem(operation);
           syncedCount++;
-          console.log(`✅ Operación sincronizada: ${operation.type}`);
         } else {
           throw new Error(result.error || 'Error desconocido');
         }
 
       } catch (error) {
-        console.error(`❌ Error sincronizando operación ${operation.type}:`, error);
         operation.status = 'failed';
         operation.error = error.message;
         await updateQueueItem(operation);

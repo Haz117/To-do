@@ -49,11 +49,9 @@ export default function LoginScreen({ onLogin }) {
     const normalizedEmail = email.trim().toLowerCase();
 
     setLoading(true);
-    console.log('🔐 LOGIN: Intentando con email:', normalizedEmail);
     
     try {
       const result = await loginUser(normalizedEmail, password);
-      console.log('🔐 LOGIN: Resultado:', result.success ? 'ÉXITO' : 'FALLO', result.error || '');
       
       if (result.success) {
         showToast('¡Bienvenido! Iniciando sesión...', 'success');
@@ -64,7 +62,6 @@ export default function LoginScreen({ onLogin }) {
         showToast(result.error || 'Usuario o contraseña incorrectos', 'error');
       }
     } catch (error) {
-      console.error('🔐 LOGIN ERROR:', error);
       showToast('Error de conexión. Verifica tu internet', 'error');
     } finally {
       setLoading(false);

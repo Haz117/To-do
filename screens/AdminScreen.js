@@ -58,12 +58,9 @@ export default function AdminScreen({ navigation, onLogout }) {
         return timeLeft > 0 && timeLeft < sixHours;
       });
       
-      console.log('🚨 AdminScreen - Tareas urgentes encontradas:', urgent.length);
-      
       if (urgent.length > 0) {
         setUrgentTasks(urgent);
         setTimeout(() => {
-          console.log('🚨 AdminScreen - Mostrando modal urgente');
           setShowUrgentModal(true);
         }, 1500);
       }
@@ -98,7 +95,7 @@ export default function AdminScreen({ navigation, onLogout }) {
       }));
       setAllUsers(users);
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
+      // Error silencioso
     }
   };
 
@@ -243,7 +240,6 @@ export default function AdminScreen({ navigation, onLogout }) {
         'Información', 
         'Las notificaciones push no están disponibles en Expo Go.\n\nPara usarlas necesitas crear un build de desarrollo con:\n\neas build --profile development --platform android'
       );
-      console.log('[Notifications] Error (esperado en Expo Go):', error.message);
     }
   };
 
@@ -293,15 +289,12 @@ export default function AdminScreen({ navigation, onLogout }) {
           text: 'Todas las Tareas (CSV)',
           onPress: async () => {
             try {
-              console.log('📄 Iniciando exportación de reporte...');
               const result = await generateTaskReport();
-              console.log('Reporte generado:', result);
               Alert.alert(
                 'Reporte Generado', 
                 `El archivo CSV ha sido generado exitosamente.${Platform.OS === 'web' ? '\n\nEl archivo se descargó automáticamente.' : '\n\nEl archivo se compartió exitosamente.'}`
               );
             } catch (error) {
-              console.error('❌ Error exportando:', error);
               Alert.alert(
                 'Error al Exportar', 
                 `No se pudo generar el reporte: ${error.message}\n\nPor favor verifica que haya tareas en el sistema.`
@@ -314,11 +307,9 @@ export default function AdminScreen({ navigation, onLogout }) {
           onPress: async () => {
             const now = new Date();
             try {
-              console.log('Generando estadísticas mensuales...');
               await generateMonthlyReport(now.getFullYear(), now.getMonth() + 1);
               Alert.alert('Reporte Generado', 'Las estadísticas han sido exportadas');
             } catch (error) {
-              console.error('❌ Error en estadísticas:', error);
               Alert.alert('Error', error.message);
             }
           }

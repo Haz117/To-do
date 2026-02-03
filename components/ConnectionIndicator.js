@@ -46,10 +46,8 @@ export default function ConnectionIndicator() {
       const unsubscribeFirebase = onValue(connectedRef, (snapshot) => {
         if (snapshot.val() === true) {
           // Connected to Firebase
-          console.log('[Firebase] Connected successfully');
         } else {
           // Not connected to Firebase
-          console.log('[Firebase] Disconnected');
         }
       });
 
@@ -58,7 +56,6 @@ export default function ConnectionIndicator() {
         unsubscribeFirebase();
       };
     } catch (error) {
-      console.log('Firebase Realtime Database not configured');
       return () => {
         unsubscribeNetInfo();
       };

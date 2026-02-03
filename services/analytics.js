@@ -97,7 +97,6 @@ export const getGeneralMetrics = async (userId, userRole) => {
       }
     };
   } catch (error) {
-    console.error('Error obteniendo métricas:', error);
     return { success: false, error: error.message };
   }
 };
@@ -151,7 +150,6 @@ export const getTrendData = async (userId, userRole) => {
 
     return { success: true, data: days };
   } catch (error) {
-    console.error('Error obteniendo datos de tendencia:', error);
     return { success: false, error: error.message };
   }
 };
@@ -208,7 +206,6 @@ export const getAreaStats = async () => {
 
     return { success: true, areas };
   } catch (error) {
-    console.error('Error obteniendo stats por área:', error);
     return { success: false, error: error.message };
   }
 };
@@ -277,7 +274,6 @@ export const getTopPerformers = async () => {
 
     return { success: true, performers: performers.slice(0, 10) };
   } catch (error) {
-    console.error('Error obteniendo top performers:', error);
     return { success: false, error: error.message };
   }
 };

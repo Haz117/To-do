@@ -68,13 +68,11 @@ export default function HomeScreen({ navigation }) {
   const loadCurrentUser = useCallback(async () => {
     const result = await getCurrentSession();
     if (result.success) {
-      console.log('👤 Usuario actual:', result.session);
       setCurrentUser(result.session);
       
       // Refrescar sesión desde Firestore para asegurar datos actualizados
       const refreshResult = await refreshSession();
       if (refreshResult.success) {
-        console.log('🔄 Sesión refrescada correctamente');
         setCurrentUser(refreshResult.session);
       }
     }
@@ -95,15 +93,12 @@ export default function HomeScreen({ navigation }) {
     let mounted = true;
     let unsubscribe = null;
     
-    console.log('🔄 HomeScreen: Iniciando suscripción...');
-    
     // Función async para manejar la suscripción
     const setupSubscription = async () => {
       try {
         unsubscribe = await subscribeToTasks((updatedTasks) => {
           if (!mounted) return;
           
-          console.log('📦 Tareas recibidas:', updatedTasks.length);
           setTasks(updatedTasks);
           setIsLoading(false);
           
@@ -135,7 +130,6 @@ export default function HomeScreen({ navigation }) {
           }
         });
       } catch (error) {
-        console.error('❌ Error en suscripción:', error);
         setIsLoading(false);
       }
     };
@@ -145,7 +139,6 @@ export default function HomeScreen({ navigation }) {
     // Limpiar suscripción al desmontar
     return () => {
       mounted = false;
-      console.log('🧹 HomeScreen: Limpiando suscripción');
       if (unsubscribe && typeof unsubscribe === 'function') {
         unsubscribe();
       }
@@ -303,7 +296,6 @@ export default function HomeScreen({ navigation }) {
       setToastType('success');
       setToastVisible(true);
     } catch (error) {
-      console.error('Error copiando al portapapeles:', error);
       setToastMessage('Error al copiar');
       setToastType('error');
       setToastVisible(true);
