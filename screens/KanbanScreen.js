@@ -494,12 +494,12 @@ export default function KanbanScreen({ navigation }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={[styles.headerGradient, { backgroundColor: isDark ? '#1A1A1A' : '#9F2241' }]}>
+        <View style={[styles.headerGradient, { backgroundColor: theme.primary }]}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <View style={styles.greetingContainer}>
-                <Ionicons name="apps" size={22} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.greeting}>Vista de tablero</Text>
+                <Ionicons name="hand-right" size={20} color="#FFFFFF" style={{ marginRight: 8, opacity: 0.9 }} />
+                <Text style={styles.greeting}>Hola!</Text>
               </View>
               <Text style={styles.heading}>Kanban</Text>
             </View>
@@ -833,8 +833,8 @@ const createStyles = (theme, isDark, columnWidth = 300) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
   },
   greetingContainer: {
     flexDirection: 'row',
@@ -842,18 +842,17 @@ const createStyles = (theme, isDark, columnWidth = 300) => StyleSheet.create({
     marginBottom: 4
   },
   greeting: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
     opacity: 0.9,
-    textTransform: 'uppercase',
-    letterSpacing: 1
+    letterSpacing: 0.3
   },
   heading: { 
-    fontSize: 36,
-    fontWeight: '900',
+    fontSize: 32, 
+    fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -1
+    letterSpacing: -1.2
   },
   headerActions: {
     flexDirection: 'row',

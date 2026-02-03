@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, RefreshControl, Animated, Platform, StatusBar, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Animated, Platform, StatusBar, Modal, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { getSwipeable } from '../utils/platformComponents';
@@ -176,7 +176,7 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate('TaskChat', { taskId: task.id, taskTitle: task.title });
   }, [navigation]);
 
-  const deleteTask = useCallback(async (taskId, skipConfirm = false) => {
+  const deleteTask = useCallback(async (taskId) => {
     // Solo admin puede eliminar tareas
     if (!currentUser || currentUser.role !== 'admin') {
       setToastMessage('Solo los administradores pueden eliminar tareas');
@@ -188,47 +188,28 @@ export default function HomeScreen({ navigation }) {
     // Guardar tarea antes de eliminar para undo
     const taskToDelete = tasks.find(t => t.id === taskId);
 
-    const performDelete = async () => {
-      try {
-        hapticHeavy();
-        await deleteTaskFirebase(taskId);
-        setToastMessage('Tarea eliminada');
-        setToastType('success');
-        setToastAction({
-          label: 'Deshacer',
-          onPress: async () => {
-            // Recrear la tarea
-            if (taskToDelete) {
-              await createTask(taskToDelete);
-              setToastMessage('Tarea restaurada');
-              setToastType('info');
-              setToastVisible(true);
-            }
+    try {
+      hapticHeavy();
+      await deleteTaskFirebase(taskId);
+      setToastMessage('Tarea eliminada');
+      setToastType('success');
+      setToastAction({
+        label: 'Deshacer',
+        onPress: async () => {
+          // Recrear la tarea
+          if (taskToDelete) {
+            await createTask(taskToDelete);
+            setToastMessage('Tarea restaurada');
+            setToastType('info');
+            setToastVisible(true);
           }
-        });
-        setToastVisible(true);
-      } catch (error) {
-        setToastMessage(`Error al eliminar: ${error.message}`);
-        setToastType('error');
-        setToastVisible(true);
-      }
-    };
-
-    if (skipConfirm) {
-      performDelete();
-    } else {
-      Alert.alert(
-        'Eliminar tarea',
-        '¿Estás seguro de que quieres eliminar esta tarea?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Eliminar',
-            style: 'destructive',
-            onPress: performDelete
-          }
-        ]
-      );
+        }
+      });
+      setToastVisible(true);
+    } catch (error) {
+      setToastMessage(`Error al eliminar: ${error.message}`);
+      setToastType('error');
+      setToastVisible(true);
     }
   }, [currentUser, tasks]);
 
@@ -307,23 +288,23 @@ export default function HomeScreen({ navigation }) {
         id: `temp-${Date.now()}`
       }
     });
-    setToastMessage('✏️ Editando copia de la tarea');
+    setToastMessage('Editando copia de la tarea');
     setToastType('info');
     setToastVisible(true);
   }, [navigation]);
 
   const shareTask = useCallback(async (task) => {
     hapticLight();
-    const shareText = `📋 Tarea: ${task.title}\n📅 Vence: ${new Date(task.dueAt).toLocaleDateString()}\n👤 Asignado: ${task.assignedTo || 'Sin asignar'}\n🏢 Área: ${task.area || 'Sin área'}\n⚡ Prioridad: ${task.priority || 'media'}\n📊 Estado: ${task.status || 'pendiente'}`;
+    const shareText = `Tarea: ${task.title}\nVence: ${new Date(task.dueAt).toLocaleDateString()}\nAsignado: ${task.assignedTo || 'Sin asignar'}\nÁrea: ${task.area || 'Sin área'}\nPrioridad: ${task.priority || 'media'}\nEstado: ${task.status || 'pendiente'}`;
     
     try {
       await Clipboard.setStringAsync(shareText);
-      setToastMessage('✅ Tarea copiada al portapapeles');
+      setToastMessage('Tarea copiada al portapapeles');
       setToastType('success');
       setToastVisible(true);
     } catch (error) {
       console.error('Error copiando al portapapeles:', error);
-      setToastMessage('❌ Error al copiar');
+      setToastMessage('Error al copiar');
       setToastType('error');
       setToastVisible(true);
     }

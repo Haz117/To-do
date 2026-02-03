@@ -129,54 +129,64 @@ export default function DashboardScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={[styles.contentWrapper, { maxWidth: isDesktop ? MAX_WIDTHS.content : '100%' }]}>
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={styles.headerTitle}>📊 Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Estadísticas y Métricas</Text>
-      </View>
+        <View style={[styles.headerGradient, { backgroundColor: theme.primary }]}>
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.greetingContainer}>
+                <Ionicons name="hand-right" size={20} color="#FFFFFF" style={{ marginRight: 8, opacity: 0.9 }} />
+                <Text style={styles.greeting}>Hola!</Text>
+              </View>
+              <Text style={styles.heading}>Reportes</Text>
+            </View>
+          </View>
+        </View>
 
       <ScrollView
         style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Tarjetas de métricas principales */}
-        <View style={styles.metricsGrid}>
-          <View style={[styles.metricCard, { backgroundColor: theme.card }]}>
-            <View style={[styles.metricIcon, { backgroundColor: '#10B981' }]}>
-              <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+        {/* Tarjetas de métricas principales - estilo círculos grandes */}
+        <View style={styles.metricsContainer}>
+          <View style={styles.metricsRow}>
+            <View style={styles.metricCardLarge}>
+              <View style={[styles.metricCircle, { backgroundColor: '#10B981' }]}>
+                <Ionicons name="checkmark-circle" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.metricNumberLarge, { color: theme.text }]}>{metrics.completed}</Text>
+              <Text style={[styles.metricLabelLarge, { color: theme.textSecondary }]}>Completadas</Text>
+              <Text style={[styles.metricPercentLarge, { color: '#10B981' }]}>{metrics.completionRate}%</Text>
             </View>
-            <Text style={[styles.metricValue, { color: theme.text }]}>{metrics.completed}</Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Completadas</Text>
-            <Text style={[styles.metricPercent, { color: '#10B981' }]}>{metrics.completionRate}%</Text>
-          </View>
 
-          <View style={[styles.metricCard, { backgroundColor: theme.card }]}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F59E0B' }]}>
-              <Ionicons name="time" size={24} color="#FFF" />
+            <View style={styles.metricCardLarge}>
+              <View style={[styles.metricCircle, { backgroundColor: '#F59E0B' }]}>
+                <Ionicons name="time" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.metricNumberLarge, { color: theme.text }]}>{metrics.pending}</Text>
+              <Text style={[styles.metricLabelLarge, { color: theme.textSecondary }]}>Pendientes</Text>
+              {metrics.overdue > 0 && (
+                <Text style={[styles.metricPercentLarge, { color: '#EF4444' }]}>{metrics.overdue} vencidas</Text>
+              )}
             </View>
-            <Text style={[styles.metricValue, { color: theme.text }]}>{metrics.pending}</Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Pendientes</Text>
-            {metrics.overdue > 0 && (
-              <Text style={[styles.metricPercent, { color: '#EF4444' }]}>{metrics.overdue} vencidas</Text>
-            )}
-          </View>
 
-          <View style={[styles.metricCard, { backgroundColor: theme.card }]}>
-            <View style={[styles.metricIcon, { backgroundColor: '#3B82F6' }]}>
-              <Ionicons name="play-circle" size={24} color="#FFF" />
+            <View style={styles.metricCardLarge}>
+              <View style={[styles.metricCircle, { backgroundColor: '#3B82F6' }]}>
+                <Ionicons name="play-circle" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.metricNumberLarge, { color: theme.text }]}>{metrics.inProgress}</Text>
+              <Text style={[styles.metricLabelLarge, { color: theme.textSecondary }]}>En Proceso</Text>
             </View>
-            <Text style={[styles.metricValue, { color: theme.text }]}>{metrics.inProgress}</Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>En Proceso</Text>
-          </View>
 
-          <View style={[styles.metricCard, { backgroundColor: theme.card }]}>
-            <View style={[styles.metricIcon, { backgroundColor: '#8B5CF6' }]}>
-              <Ionicons name="eye" size={24} color="#FFF" />
+            <View style={styles.metricCardLarge}>
+              <View style={[styles.metricCircle, { backgroundColor: '#8B5CF6' }]}>
+                <Ionicons name="eye" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.metricNumberLarge, { color: theme.text }]}>{metrics.inReview}</Text>
+              <Text style={[styles.metricLabelLarge, { color: theme.textSecondary }]}>En Revisión</Text>
             </View>
-            <Text style={[styles.metricValue, { color: theme.text }]}>{metrics.inReview}</Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>En Revisión</Text>
           </View>
         </View>
 
@@ -187,13 +197,15 @@ export default function DashboardScreen({ navigation }) {
               key={period}
               style={[
                 styles.periodButton,
-                selectedPeriod === period && { backgroundColor: theme.primary },
+                { backgroundColor: theme.background },
+                selectedPeriod === period && styles.periodButtonActive
               ]}
               onPress={() => { setSelectedPeriod(period); hapticMedium(); }}
             >
               <Text style={[
                 styles.periodButtonText,
-                { color: selectedPeriod === period ? '#FFF' : theme.textSecondary }
+                { color: theme.text },
+                selectedPeriod === period && styles.periodButtonTextActive
               ]}>
                 {period === 'today' ? 'Hoy' : period === 'week' ? 'Semana' : 'Mes'}
               </Text>
@@ -201,55 +213,42 @@ export default function DashboardScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Métricas del periodo */}
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {/* Resumen del periodo */}
+        <View style={[styles.summaryCard, { backgroundColor: theme.background }]}>
+          <Text style={[styles.summaryTitle, { color: theme.text }]}>
             Resumen del {selectedPeriod === 'today' ? 'Día' : selectedPeriod === 'week' ? 'de la Semana' : 'Mes'}
           </Text>
-          <View style={styles.periodStats}>
-            <View style={styles.periodStat}>
-              <Text style={[styles.periodValue, { color: theme.primary }]}>{periodData.created}</Text>
-              <Text style={[styles.periodLabel, { color: theme.textSecondary }]}>Creadas</Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: theme.primary }]}>{periodData.created}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Creadas</Text>
             </View>
-            <View style={styles.periodStat}>
-              <Text style={[styles.periodValue, { color: '#10B981' }]}>{periodData.completed}</Text>
-              <Text style={[styles.periodLabel, { color: theme.textSecondary }]}>Completadas</Text>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: '#10B981' }]}>{periodData.completed}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Completadas</Text>
             </View>
-            <View style={styles.periodStat}>
-              <Text style={[styles.periodValue, { color: '#8B5CF6' }]}>{metrics.weeklyProductivity}%</Text>
-              <Text style={[styles.periodLabel, { color: theme.textSecondary }]}>Productividad</Text>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryValue, { color: '#8B5CF6' }]}>{metrics.weeklyProductivity}%</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Productividad</Text>
             </View>
           </View>
         </View>
 
-        {/* Tiempo promedio de completado */}
-        {metrics.avgCompletionTime > 0 && (
-          <View style={[styles.section, { backgroundColor: theme.card }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="timer-outline" size={24} color={theme.primary} />
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Tiempo Promedio</Text>
-            </View>
-            <Text style={[styles.avgTime, { color: theme.text }]}>
-              {formatCompletionTime(metrics.avgCompletionTime)}
-            </Text>
-            <Text style={[styles.avgTimeLabel, { color: theme.textSecondary }]}>
-              Tiempo promedio para completar tareas
-            </Text>
-          </View>
-        )}
-
         {/* Gráfica de tendencia */}
         {trendData.length > 0 && (
-          <View style={[styles.section, { backgroundColor: theme.card }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>📈 Tendencia (últimos 7 días)</Text>
+          <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
+            <View style={styles.chartHeader}>
+              <Ionicons name="trending-up" size={20} color={theme.text} />
+              <Text style={[styles.chartTitle, { color: theme.text }]}>Tendencia (últimos 7 días)</Text>
+            </View>
             <LineChart
               data={lineData}
-              width={width - 60}
-              height={220}
+              width={screenWidth - 32}
+              height={200}
               chartConfig={{
-                backgroundColor: theme.card,
-                backgroundGradientFrom: theme.card,
-                backgroundGradientTo: theme.card,
+                backgroundColor: theme.background,
+                backgroundGradientFrom: theme.background,
+                backgroundGradientTo: theme.background,
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(159, 34, 65, ${opacity})`,
                 labelColor: (opacity = 1) => isDark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
@@ -264,12 +263,15 @@ export default function DashboardScreen({ navigation }) {
 
         {/* Distribución por estado */}
         {statusPieData.length > 0 && (
-          <View style={[styles.section, { backgroundColor: theme.card }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>🎯 Distribución por Estado</Text>
+          <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
+            <View style={styles.chartHeader}>
+              <Ionicons name="pie-chart" size={20} color={theme.text} />
+              <Text style={[styles.chartTitle, { color: theme.text }]}>Distribución por Estado</Text>
+            </View>
             <PieChart
               data={statusPieData}
-              width={width - 60}
-              height={220}
+              width={screenWidth - 32}
+              height={200}
               chartConfig={{
                 color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
               }}
@@ -282,88 +284,44 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
 
-        {/* Tareas por prioridad */}
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>⚡ Tareas por Prioridad</Text>
-          <BarChart
-            data={priorityBarData}
-            width={width - 60}
-            height={220}
-            chartConfig={{
-              backgroundColor: theme.card,
-              backgroundGradientFrom: theme.card,
-              backgroundGradientTo: theme.card,
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(159, 34, 65, ${opacity})`,
-              labelColor: (opacity = 1) => isDark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
-              barPercentage: 0.7,
-            }}
-            style={styles.chart}
-            showValuesOnTopOfBars
-          />
-        </View>
-
         {/* Top performers (solo admin) */}
         {currentUser?.role === 'admin' && performers.length > 0 && (
-          <View style={[styles.section, { backgroundColor: theme.card }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>🏆 Top Performers (Esta Semana)</Text>
-            {performers.slice(0, 5).map((performer, index) => (
-              <View key={performer.userId} style={[styles.performer, { borderBottomColor: theme.border }]}>
-                <View style={styles.performerLeft}>
-                  <View style={[styles.performerRank, { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : theme.surface }]}>
+          <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
+            <View style={styles.chartHeader}>
+              <Ionicons name="trophy" size={20} color={theme.text} />
+              <Text style={[styles.chartTitle, { color: theme.text }]}>Top Performers (Esta Semana)</Text>
+            </View>
+            {performers.slice(0, 3).map((performer, index) => (
+              <View key={performer.userId} style={[styles.performerRow, index < 2 && { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={[styles.performerRank, { 
+                    backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'
+                  }]}>
                     <Text style={styles.performerRankText}>{index + 1}</Text>
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={[styles.performerName, { color: theme.text }]}>{performer.name}</Text>
                     <Text style={[styles.performerStats, { color: theme.textSecondary }]}>
-                      {performer.completedThisWeek} completadas • {performer.completionRate}% tasa
+                      {performer.completedThisWeek} tareas • {performer.onTimeRate}% a tiempo
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.performerBadge, { backgroundColor: '#10B98120' }]}>
+                <View style={[styles.performerBadge, { backgroundColor: '#10B98115' }]}>
                   <Text style={[styles.performerBadgeText, { color: '#10B981' }]}>
-                    {performer.onTimeRate}%
+                    {performer.completionRate}%
                   </Text>
                 </View>
               </View>
             ))}
           </View>
         )}
-
-        {/* Estadísticas por área (solo admin) */}
-        {currentUser?.role === 'admin' && Object.keys(areaStats).length > 0 && (
-          <View style={[styles.section, { backgroundColor: theme.card }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>📋 Estadísticas por Área</Text>
-            {Object.entries(areaStats).map(([area, stats]) => (
-              <View key={area} style={[styles.areaStat, { borderBottomColor: theme.border }]}>
-                <Text style={[styles.areaName, { color: theme.text }]}>{area}</Text>
-                <View style={styles.areaMetrics}>
-                  <View style={styles.areaMetric}>
-                    <Text style={[styles.areaMetricValue, { color: theme.text }]}>{stats.total}</Text>
-                    <Text style={[styles.areaMetricLabel, { color: theme.textSecondary }]}>Total</Text>
-                  </View>
-                  <View style={styles.areaMetric}>
-                    <Text style={[styles.areaMetricValue, { color: '#10B981' }]}>{stats.completed}</Text>
-                    <Text style={[styles.areaMetricLabel, { color: theme.textSecondary }]}>Completadas</Text>
-                  </View>
-                  <View style={styles.areaMetric}>
-                    <Text style={[styles.areaMetricValue, { color: theme.primary }]}>{stats.completionRate}%</Text>
-                    <Text style={[styles.areaMetricLabel, { color: theme.textSecondary }]}>Tasa</Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
       </View>
     </View>
   );
 }
 
-const createStyles = (theme, isDark, isDesktop = false, isTablet = false, screenWidth = 400, padding = 16, columns = 1) => StyleSheet.create({
+const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, columns) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -380,141 +338,164 @@ const createStyles = (theme, isDark, isDesktop = false, isTablet = false, screen
     marginTop: 12,
     fontSize: 16,
   },
+  headerGradient: {
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    shadowColor: '#9F2241',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10
+  },
   header: {
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: padding,
-    borderBottomLeftRadius: RADIUS.xl,
-    borderBottomRightRadius: RADIUS.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFF',
-    marginBottom: 4,
+  greetingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4
   },
-  headerSubtitle: {
+  greeting: {
     fontSize: 16,
-    color: '#FFFFFF90',
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    letterSpacing: 0.3
+  },
+  heading: { 
+    fontSize: 32, 
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -1.2
   },
   scroll: {
     flex: 1,
   },
-  metricsGrid: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80,
+  },
+  metricsContainer: {
+    marginBottom: 20,
+  },
+  metricsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: padding,
-    gap: SPACING.md,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  metricCard: {
-    width: isDesktop ? `${(100 / Math.min(columns, 4)) - 2}%` : (screenWidth - (padding * 2) - SPACING.md) / 2,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.lg,
+  metricCardLarge: {
+    flex: 1,
+    backgroundColor: theme.background,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 140,
   },
-  metricIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  metricCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
-  metricValue: {
-    fontSize: 32,
-    fontWeight: '800',
+  metricNumberLarge: {
+    fontSize: 36,
+    fontWeight: '900',
     marginBottom: 4,
   },
-  metricLabel: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  metricPercent: {
+  metricLabelLarge: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  metricPercentLarge: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
   },
   periodSelector: {
     flexDirection: 'row',
-    marginHorizontal: 20,
+    gap: 0,
     marginBottom: 20,
-    gap: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   periodButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  periodButtonActive: {
+    backgroundColor: theme.primary,
   },
   periodButtonText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  section: {
-    marginHorizontal: padding,
-    marginBottom: SPACING.lg,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.lg,
+  periodButtonTextActive: {
+    color: '#FFFFFF',
   },
-  sectionHeader: {
+  summaryCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  chartCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  chartHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
+  chartTitle: {
+    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 16,
-  },
-  periodStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  periodStat: {
-    alignItems: 'center',
-  },
-  periodValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  periodLabel: {
-    fontSize: 13,
-  },
-  avgTime: {
-    fontSize: 36,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  avgTimeLabel: {
-    fontSize: 14,
-    textAlign: 'center',
   },
   chart: {
-    marginVertical: SPACING.sm,
-    borderRadius: RADIUS.lg,
+    marginVertical: 8,
+    borderRadius: 16,
   },
-  chartsContainer: {
-    flexDirection: isDesktop ? 'row' : 'column',
-    gap: SPACING.md,
-  },
-  chartSection: {
-    flex: isDesktop ? 1 : undefined,
-    width: isDesktop ? undefined : '100%',
-  },
-  performer: {
+  performerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  performerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    paddingVertical: 14,
   },
   performerRank: {
     width: 32,
@@ -525,7 +506,7 @@ const createStyles = (theme, isDark, isDesktop = false, isTablet = false, screen
   },
   performerRankText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFF',
   },
   performerName: {
@@ -544,29 +525,5 @@ const createStyles = (theme, isDark, isDesktop = false, isTablet = false, screen
   performerBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  areaStat: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  areaName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  areaMetrics: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  areaMetric: {
-    alignItems: 'center',
-  },
-  areaMetricValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  areaMetricLabel: {
-    fontSize: 12,
   },
 });

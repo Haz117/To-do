@@ -2,7 +2,7 @@
 // "Mi bandeja" - lista de tareas asignadas al usuario actual, ordenadas por fecha de vencimiento.
 // Acciones rápidas: marcar cerrada y posponer 1 día. Abre detalle y chat.
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, RefreshControl, SectionList, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, SectionList, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -257,20 +257,11 @@ export default function MyInboxScreen({ navigation }) {
   };
 
   const deleteTask = async (taskId) => {
-    Alert.alert(
-      'Eliminar tarea',
-      '¿Estás seguro de que quieres eliminar esta tarea?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteTaskFirebase(taskId);
-          }
-        }
-      ]
-    );
+    try {
+      await deleteTaskFirebase(taskId);
+    } catch (error) {
+      console.warn('Error eliminando tarea', error);
+    }
   };
 
   const toggleComplete = async (task) => {

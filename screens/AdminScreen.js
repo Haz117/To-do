@@ -1,7 +1,7 @@
 // screens/AdminScreen.js
 // Pantalla de configuración y administración
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Animated, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Animated, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ensurePermissions, getAllScheduledNotifications, cancelAllNotifications } from '../services/notifications';
 import { generateTaskReport, generateMonthlyReport } from '../services/reports';
@@ -10,7 +10,7 @@ import { db } from '../firebase';
 import * as Notifications from 'expo-notifications';
 import { getCurrentSession, logoutUser, isAdmin } from '../services/authFirestore';
 import { useTheme } from '../contexts/ThemeContext';
-import SpringCard from '../components/SpringCard';
+import Toast from '../components/Toast';
 import OverdueAlert from '../components/OverdueAlert';
 import { hapticMedium, hapticLight } from '../utils/haptics';
 import { subscribeToTasks } from '../services/tasks';
@@ -30,6 +30,15 @@ export default function AdminScreen({ navigation, onLogout }) {
   const [newPassword, setNewPassword] = useState('');
   const [showUrgentModal, setShowUrgentModal] = useState(false);
   const [urgentTasks, setUrgentTasks] = useState([]);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
   
   useEffect(() => {
     loadNotificationCount();
@@ -95,17 +104,17 @@ export default function AdminScreen({ navigation, onLogout }) {
 
   const resetUserPassword = async () => {
     if (!resetEmail.trim() || !newPassword.trim()) {
-      Alert.alert('Error', 'Por favor completa email y nueva contraseña');
+      showToast('Por favor completa email y nueva contraseña', 'error');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      showToast('La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
 
     if (!isUserAdmin) {
-      Alert.alert('Acceso Denegado', 'Solo los administradores pueden resetear contraseñas');
+      showToast('Solo los administradores pueden resetear contraseñas', 'warning');
       return;
     }
 
@@ -115,7 +124,7 @@ export default function AdminScreen({ navigation, onLogout }) {
       const querySnapshot = await getDocs(q);
       
       if (querySnapshot.empty) {
-        Alert.alert('Error', 'Usuario no encontrado');
+        showToast('Usuario no encontrado', 'error');
         return;
       }
 
@@ -135,11 +144,11 @@ export default function AdminScreen({ navigation, onLogout }) {
         password: hashedPassword
       });
 
-      Alert.alert('Contraseña Reseteada', 'La contraseña ha sido actualizada');
+      showToast('La contraseña ha sido actualizada', 'success');
       setResetEmail('');
       setNewPassword('');
     } catch (error) {
-      Alert.alert('Error', 'No se pudo resetear la contraseña: ' + error.message);
+      showToast('No se pudo resetear la contraseña: ' + error.message, 'error');
     }
   };
 
@@ -148,10 +157,10 @@ export default function AdminScreen({ navigation, onLogout }) {
       await updateDoc(doc(db, 'users', userId), {
         active: !currentStatus
       });
-      Alert.alert('Estado Actualizado', 'El usuario ha sido ' + (!currentStatus ? 'activado' : 'desactivado'));
+      showToast('El usuario ha sido ' + (!currentStatus ? 'activado' : 'desactivado'), 'success');
       loadAllUsers();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar el estado: ' + error.message);
+      showToast('No se pudo actualizar el estado: ' + error.message, 'error');
     }
   };
 
@@ -162,22 +171,22 @@ export default function AdminScreen({ navigation, onLogout }) {
 
   const createUser = async () => {
     if (!userName.trim() || !userEmail.trim() || !userPassword.trim()) {
-      Alert.alert('Error', 'Por favor completa nombre, email y contraseña');
+      showToast('Por favor completa nombre, email y contraseña', 'error');
       return;
     }
 
     if (!validateEmail(userEmail.trim())) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      showToast('Por favor ingresa un email válido', 'error');
       return;
     }
 
     if (userPassword.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      showToast('La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
 
     if (!isUserAdmin) {
-      Alert.alert('Acceso Denegado', 'Solo los administradores pueden crear usuarios');
+      showToast('Solo los administradores pueden crear usuarios', 'warning');
       return;
     }
 
@@ -187,17 +196,17 @@ export default function AdminScreen({ navigation, onLogout }) {
       const result = await registerUser(userEmail.trim(), userPassword, userName.trim(), userRole);
       
       if (result.success) {
-        Alert.alert('Usuario Creado', `${userName} ha sido agregado como ${userRole}`);
+        showToast(`${userName} ha sido agregado como ${userRole}`, 'success');
         setUserName('');
         setUserEmail('');
         setUserPassword('');
         setUserRole('operativo');
         loadAllUsers(); // Recargar lista
       } else {
-        Alert.alert('Error', result.error);
+        showToast(result.error, 'error');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear el usuario: ' + error.message);
+      showToast('No se pudo crear el usuario: ' + error.message, 'error');
     }
   };
 
@@ -214,7 +223,7 @@ export default function AdminScreen({ navigation, onLogout }) {
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🧪 Notificación de Prueba',
+          title: 'Notificación de Prueba',
           body: 'Esta es una notificación de prueba del sistema TODO',
           data: { type: 'test' },
           sound: true,
@@ -286,9 +295,9 @@ export default function AdminScreen({ navigation, onLogout }) {
             try {
               console.log('📄 Iniciando exportación de reporte...');
               const result = await generateTaskReport();
-              console.log('✅ Reporte generado:', result);
+              console.log('Reporte generado:', result);
               Alert.alert(
-                '✅ Reporte Generado', 
+                'Reporte Generado', 
                 `El archivo CSV ha sido generado exitosamente.${Platform.OS === 'web' ? '\n\nEl archivo se descargó automáticamente.' : '\n\nEl archivo se compartió exitosamente.'}`
               );
             } catch (error) {
@@ -305,9 +314,9 @@ export default function AdminScreen({ navigation, onLogout }) {
           onPress: async () => {
             const now = new Date();
             try {
-              console.log('📊 Generando estadísticas mensuales...');
+              console.log('Generando estadísticas mensuales...');
               await generateMonthlyReport(now.getFullYear(), now.getMonth() + 1);
-              Alert.alert('✅ Reporte Generado', 'Las estadísticas han sido exportadas');
+              Alert.alert('Reporte Generado', 'Las estadísticas han sido exportadas');
             } catch (error) {
               console.error('❌ Error en estadísticas:', error);
               Alert.alert('Error', error.message);
@@ -333,7 +342,7 @@ export default function AdminScreen({ navigation, onLogout }) {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="warning" size={32} color="#FF3B30" style={{ marginRight: 12 }} />
                 <View>
-                  <Text style={[styles.urgentModalTitle, { color: theme.text }]}>⚠️ ¡Alerta Urgente!</Text>
+                  <Text style={[styles.urgentModalTitle, { color: theme.text }]}>¡Alerta Urgente!</Text>
                   <Text style={[styles.urgentModalSubtitle, { color: theme.textSecondary }]}>
                     Tareas críticas próximas a vencer
                   </Text>
@@ -371,9 +380,16 @@ export default function AdminScreen({ navigation, onLogout }) {
                         <Text style={[styles.urgentTaskTitle, { color: theme.text }]} numberOfLines={2}>
                           {task.title}
                         </Text>
-                        <Text style={[styles.urgentTaskArea, { color: theme.textSecondary }]}>
-                          📍 {task.area} • 👤 {task.assignedTo}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                          <Ionicons name="location" size={14} color={theme.textSecondary} />
+                          <Text style={[styles.urgentTaskArea, { color: theme.textSecondary }]}>
+                            {task.area}
+                          </Text>
+                          <Ionicons name="person" size={14} color={theme.textSecondary} />
+                          <Text style={[styles.urgentTaskArea, { color: theme.textSecondary }]}>
+                            {task.assignedTo}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                     <View style={[styles.urgentTaskTimer, { 
@@ -383,7 +399,7 @@ export default function AdminScreen({ navigation, onLogout }) {
                       <Text style={[styles.urgentTaskTime, { 
                         color: hoursLeft < 2 ? '#FF3B30' : '#FF9500' 
                       }]}>
-                        ⏰ {hoursLeft}h {minutesLeft}m restantes
+                        {hoursLeft}h {minutesLeft}m restantes
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -402,11 +418,14 @@ export default function AdminScreen({ navigation, onLogout }) {
         </View>
       </Modal>
 
-      <View style={[styles.header, { backgroundColor: isDark ? '#1A1A1A' : '#9F2241' }]}>
-        <View style={styles.headerTop}>
+      <View style={[styles.headerGradient, { backgroundColor: theme.primary }]}>
+        <View style={styles.header}>
           <View style={{ flex: 1 }}>
+            <View style={styles.greetingContainer}>
+              <Ionicons name="hand-right" size={20} color="#FFFFFF" style={{ marginRight: 8, opacity: 0.9 }} />
+              <Text style={styles.greeting}>Hola!</Text>
+            </View>
             <Text style={styles.heading}>Administración</Text>
-            <Text style={styles.subheading}>{currentUser?.displayName || 'Cargando...'}</Text>
           </View>
           <TouchableOpacity 
             style={styles.logoutButton}
@@ -446,41 +465,41 @@ export default function AdminScreen({ navigation, onLogout }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats Overview */}
+        {/* Stats Overview - Estilo tarjetas grandes */}
         <View style={styles.statsContainer}>
-          <SpringCard style={[styles.statCard, { backgroundColor: isDark ? '#1E3A8A' : '#3B82F6' }]}>
-            <Ionicons name="people" size={32} color="#FFFFFF" />
+          <View style={[styles.statCard, { backgroundColor: '#3B82F6' }]}>
+            <Ionicons name="people" size={36} color="#FFFFFF" />
             <Text style={styles.statNumber}>{allUsers.length}</Text>
-            <Text style={styles.statLabel}>Usuarios</Text>
-          </SpringCard>
+            <Text style={styles.statLabel}>USUARIOS</Text>
+          </View>
 
-          <SpringCard style={[styles.statCard, { backgroundColor: isDark ? '#7C2D12' : '#F59E0B' }]}>
-            <Ionicons name="notifications" size={32} color="#FFFFFF" />
+          <View style={[styles.statCard, { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name="notifications" size={36} color="#FFFFFF" />
             <Text style={styles.statNumber}>{notificationCount}</Text>
-            <Text style={styles.statLabel}>Notificaciones</Text>
-          </SpringCard>
+            <Text style={styles.statLabel}>NOTIFICACIONES</Text>
+          </View>
 
-          <SpringCard style={[styles.statCard, { backgroundColor: isDark ? '#065F46' : '#10B981' }]}>
-            <Ionicons name={isDark ? "moon" : "sunny"} size={32} color="#FFFFFF" />
+          <View style={[styles.statCard, { backgroundColor: '#10B981' }]}>
+            <Ionicons name={isDark ? "moon" : "sunny"} size={36} color="#FFFFFF" />
             <Text style={styles.statNumber}>{isDark ? 'ON' : 'OFF'}</Text>
-            <Text style={styles.statLabel}>Modo Oscuro</Text>
-          </SpringCard>
+            <Text style={styles.statLabel}>MODO OSCURO</Text>
+          </View>
         </View>
 
         {/* Crear Usuario */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#8B4789' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#8B5CF6' }]}>
               <Ionicons name="person-add" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Crear Usuario</Text>
           </View>
           
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#1A1A1D' : '#F9FAFB', borderColor: theme.border }]}>
-            <Ionicons name="person-outline" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Ionicons name="person-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
             <TextInput
               placeholder="Nombre del usuario"
-              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+              placeholderTextColor={theme.textSecondary}
               value={userName}
               onChangeText={setUserName}
               style={[styles.input, { color: theme.text }]}
@@ -488,11 +507,11 @@ export default function AdminScreen({ navigation, onLogout }) {
             />
           </View>
           
-          <View style={[styles.inputContainer, { backgroundColor: (isDark ? '#1A1A1D' : '#F9FAFB'), borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={(isDark ? '#9CA3AF' : '#6B7280')} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
             <TextInput
               placeholder="Email"
-              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+              placeholderTextColor={theme.textSecondary}
               value={userEmail}
               onChangeText={setUserEmail}
               style={[styles.input, { color: theme.text }]}
@@ -501,11 +520,11 @@ export default function AdminScreen({ navigation, onLogout }) {
             />
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: (isDark ? '#1A1A1D' : '#F9FAFB'), borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={(isDark ? '#9CA3AF' : '#6B7280')} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
             <TextInput
               placeholder="Contraseña"
-              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+              placeholderTextColor={theme.textSecondary}
               value={userPassword}
               onChangeText={setUserPassword}
               style={[styles.input, { color: theme.text }]}
@@ -518,8 +537,8 @@ export default function AdminScreen({ navigation, onLogout }) {
             <TouchableOpacity 
               style={[
                 styles.roleButton, 
-                { backgroundColor: theme.surface },
-                userRole === 'operativo' && styles.roleButtonActive
+                { backgroundColor: theme.background, borderColor: theme.border },
+                userRole === 'operativo' && { backgroundColor: theme.primary, borderColor: theme.primary }
               ]}
               onPress={() => {
                 hapticLight();
@@ -528,8 +547,8 @@ export default function AdminScreen({ navigation, onLogout }) {
             >
               <Text style={[
                 styles.roleButtonText, 
-                { color: theme.textSecondary },
-                userRole === 'operativo' && styles.roleButtonTextActive
+                { color: theme.text },
+                userRole === 'operativo' && { color: '#FFFFFF' }
               ]}>
                 Operativo
               </Text>
@@ -537,8 +556,8 @@ export default function AdminScreen({ navigation, onLogout }) {
             <TouchableOpacity 
               style={[
                 styles.roleButton, 
-                { backgroundColor: theme.surface },
-                userRole === 'admin' && styles.roleButtonActive
+                { backgroundColor: theme.background, borderColor: theme.border },
+                userRole === 'admin' && { backgroundColor: theme.primary, borderColor: theme.primary }
               ]}
               onPress={() => {
                 hapticLight();
@@ -547,8 +566,8 @@ export default function AdminScreen({ navigation, onLogout }) {
             >
               <Text style={[
                 styles.roleButtonText, 
-                { color: theme.textSecondary },
-                userRole === 'admin' && styles.roleButtonTextActive
+                { color: theme.text },
+                userRole === 'admin' && { color: '#FFFFFF' }
               ]}>
                 Administrador
               </Text>
@@ -567,19 +586,19 @@ export default function AdminScreen({ navigation, onLogout }) {
               <Text style={styles.buttonText}>Crear Usuario</Text>
             </View>
           </TouchableOpacity>
-        </SpringCard>
+        </View>
 
         {/* Lista de Usuarios */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#3B82F6' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#3B82F6' }]}>
               <Ionicons name="people" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Usuarios ({allUsers.length})</Text>
           </View>
 
           <TouchableOpacity 
-            style={[styles.expandButton, { backgroundColor: theme.surface, borderColor: theme.border }]} 
+            style={[styles.expandButton, { backgroundColor: theme.background, borderColor: theme.border }]} 
             onPress={() => {
               hapticLight();
               setShowUserList(!showUserList);
@@ -601,13 +620,13 @@ export default function AdminScreen({ navigation, onLogout }) {
               {allUsers.map((user) => (
                 <View 
                   key={user.id} 
-                  style={[styles.userCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  style={[styles.userCard, { backgroundColor: theme.background, borderColor: theme.border }]}
                 >
                   <View style={styles.userInfo}>
                     <View style={styles.userHeader}>
                       <View style={[
                         styles.userAvatar, 
-                        { backgroundColor: user.role === 'admin' ? (isDark ? '#7C2D12' : '#DC2626') : (isDark ? '#1E40AF' : '#3B82F6') }
+                        { backgroundColor: user.role === 'admin' ? '#DC2626' : '#3B82F6' }
                       ]}>
                         <Ionicons 
                           name={user.role === 'admin' ? 'shield-checkmark' : 'person'} 
@@ -621,19 +640,22 @@ export default function AdminScreen({ navigation, onLogout }) {
                       </View>
                       <View style={[
                         styles.userRoleBadge, 
-                        { backgroundColor: user.role === 'admin' ? (isDark ? '#7C2D12' : '#DC2626') : (isDark ? '#1E40AF' : '#3B82F6') }
+                        { backgroundColor: user.role === 'admin' ? '#DC2626' : '#3B82F6' }
                       ]}>
                         <Text style={styles.userRoleText}>{user.role}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.userDate, { color: theme.textSecondary }]}>
-                      📅 {user.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}
-                    </Text>
+                    <View style={styles.userDateRow}>
+                      <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
+                      <Text style={[styles.userDate, { color: theme.textSecondary }]}>
+                        {user.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}
+                      </Text>
+                    </View>
                   </View>
                   <TouchableOpacity
                     style={[
                       styles.statusButton, 
-                      !user.active && styles.statusButtonInactive
+                      { backgroundColor: user.active ? '#10B981' : '#EF4444' }
                     ]}
                     onPress={() => {
                       hapticMedium();
@@ -654,22 +676,22 @@ export default function AdminScreen({ navigation, onLogout }) {
               ))}
             </View>
           )}
-        </SpringCard>
+        </View>
 
         {/* Recuperación de Contraseña */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#F59E0B' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#F59E0B' }]}>
               <Ionicons name="key" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Resetear Contraseña</Text>
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: (isDark ? '#1A1A1D' : '#F9FAFB'), borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={(isDark ? '#9CA3AF' : '#6B7280')} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
             <TextInput
               placeholder="Email del usuario"
-              placeholderTextColor={(isDark ? '#6B7280' : '#9CA3AF')}
+              placeholderTextColor={theme.textSecondary}
               value={resetEmail}
               onChangeText={setResetEmail}
               style={[styles.input, { color: theme.text }]}
@@ -678,11 +700,11 @@ export default function AdminScreen({ navigation, onLogout }) {
             />
           </View>
 
-          <View style={[styles.inputContainer, { backgroundColor: (isDark ? '#1A1A1D' : '#F9FAFB'), borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={(isDark ? '#9CA3AF' : '#6B7280')} style={styles.inputIcon} />
+          <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
             <TextInput
               placeholder="Nueva contraseña"
-              placeholderTextColor={(isDark ? '#6B7280' : '#9CA3AF')}
+              placeholderTextColor={theme.textSecondary}
               value={newPassword}
               onChangeText={setNewPassword}
               style={[styles.input, { color: theme.text }]}
@@ -698,7 +720,7 @@ export default function AdminScreen({ navigation, onLogout }) {
               resetUserPassword();
             }}
           >
-            <View style={[styles.buttonGradient, { backgroundColor: '#FF9500' }]}>
+            <View style={[styles.buttonGradient, { backgroundColor: '#F59E0B' }]}>
               <Ionicons name="refresh" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.buttonText}>Resetear Contraseña</Text>
             </View>
@@ -707,12 +729,12 @@ export default function AdminScreen({ navigation, onLogout }) {
           <Text style={[styles.helpText, { color: theme.textSecondary }]}>
             Solo administradores pueden resetear contraseñas de otros usuarios.
           </Text>
-        </SpringCard>
+        </View>
 
         {/* Notificaciones */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#06B6D4' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#06B6D4' }]}>
               <Ionicons name="notifications" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Notificaciones</Text>
@@ -732,7 +754,7 @@ export default function AdminScreen({ navigation, onLogout }) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.expandButton, { backgroundColor: theme.surface, borderColor: theme.border }]} 
+            style={[styles.expandButton, { backgroundColor: theme.background, borderColor: theme.border }]} 
             onPress={() => {
               hapticLight();
               viewScheduledNotifications();
@@ -743,21 +765,21 @@ export default function AdminScreen({ navigation, onLogout }) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.expandButton, { backgroundColor: isDark ? '#450A0A' : '#FEE2E2', borderColor: isDark ? '#7F1D1D' : '#DC2626' }]} 
+            style={[styles.expandButton, { backgroundColor: '#FEE2E2', borderColor: '#DC2626' }]} 
             onPress={() => {
               hapticMedium();
               clearAllNotifications();
             }}
           >
-            <Ionicons name="trash-outline" size={20} color={isDark ? '#F87171' : '#DC2626'} style={{ marginRight: 8 }} />
-            <Text style={[styles.expandButtonText, { color: isDark ? '#F87171' : '#DC2626' }]}>Cancelar Todas</Text>
+            <Ionicons name="trash-outline" size={20} color="#DC2626" style={{ marginRight: 8 }} />
+            <Text style={[styles.expandButtonText, { color: '#DC2626' }]}>Cancelar Todas</Text>
           </TouchableOpacity>
-        </SpringCard>
+        </View>
 
         {/* Reportes */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#8B5CF6' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#8B5CF6' }]}>
               <Ionicons name="bar-chart" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Reportes</Text>
@@ -779,12 +801,12 @@ export default function AdminScreen({ navigation, onLogout }) {
           <Text style={[styles.helpText, { color: theme.textSecondary }]}>
             Los reportes se exportan en formato CSV (compatible con Excel).
           </Text>
-        </SpringCard>
+        </View>
 
         {/* Información de la App */}
-        <SpringCard style={[styles.sectionCard, { backgroundColor: theme.card }]}>
+        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#6B7280' }]}>
+            <View style={[styles.iconCircleSection, { backgroundColor: '#6B7280' }]}>
               <Ionicons name="information-circle" size={24} color="#FFFFFF" />
             </View>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Información</Text>
@@ -829,8 +851,15 @@ export default function AdminScreen({ navigation, onLogout }) {
               </View>
             </TouchableOpacity>
           </View>
-        </SpringCard>
+        </View>
       </ScrollView>
+      
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 }
@@ -839,22 +868,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
-  header: {
+  headerGradient: {
     paddingHorizontal: 20,
     paddingTop: 48,
-    paddingBottom: 20,
+    paddingBottom: 16,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-    shadowColor: '#000',
+    shadowColor: '#9F2241',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 10
   },
-  headerTop: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  greetingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4
+  },
+  greeting: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    letterSpacing: 0.3
+  },
+  heading: { 
+    fontSize: 32, 
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -1.2
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12
   },
   logoutButton: {
@@ -864,19 +915,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center'
-  },
-  heading: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: 4
-  },
-  subheading: {
-    fontSize: 15,
-    color: '#FFFFFF',
-    opacity: 0.9,
-    fontWeight: '500'
   },
   content: {
     padding: 12,
@@ -931,7 +969,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 10
   },
-  iconCircle: {
+  iconCircleSection: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -982,18 +1020,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 10
-  },
-  roleButtonActive: {
-    backgroundColor: '#9F2241'
+    borderRadius: 10,
+    borderWidth: 1.5
   },
   roleButtonText: {
     fontSize: 15,
     fontWeight: '600'
-  },
-  roleButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700'
   },
   actionButton: {
     marginBottom: 12,
@@ -1079,6 +1111,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 4
   },
+  userDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4
+  },
   userDate: {
     fontSize: 12
   },
@@ -1089,9 +1127,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center'
-  },
-  statusButtonInactive: {
-    backgroundColor: '#6B7280'
   },
   statusButtonText: {
     color: '#FFFFFF',
@@ -1260,7 +1295,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.5
-  }
+  },
 });
 
 

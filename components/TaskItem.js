@@ -1,19 +1,20 @@
 // components/TaskItem.js
 // TaskItem moderno con animaciones y glassmorphism - Compatible con web
 import React, { useEffect, useState, memo, useRef } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
+import { TouchableOpacity, Pressable, View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
+import { useResponsive } from '../utils/responsive';
 import { hapticMedium } from '../utils/haptics';
 import { getSwipeable } from '../utils/platformComponents';
 import ContextMenu from './ContextMenu';
+import ConfirmDialog from './ConfirmDialog';
 import Avatar from './Avatar';
 import PulsingDot from './PulsingDot';
 import TaskStatusButtons from './TaskStatusButtons';
 
 const Swipeable = getSwipeable();
-const { width } = Dimensions.get('window');
 
 function formatRemaining(ms) {
   if (ms <= 0) return 'Vencida';
@@ -38,9 +39,12 @@ const TaskItem = memo(function TaskItem({
   index = 0 
 }) {
   const { theme } = useTheme();
+  const { width: screenWidth } = useResponsive();
+  const isSmallDevice = screenWidth < 400;
   const [now, setNow] = useState(Date.now());
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -147,81 +151,107 @@ const TaskItem = memo(function TaskItem({
     <>
       <Swipeable renderRightActions={renderRightActions} renderLeftActions={renderLeftActions} friction={1.5} overshootFriction={8}>
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }}>
-          <TouchableOpacity 
-            onPress={() => { hapticMedium(); onPress && onPress(task); }} 
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            onLongPress={handleLongPress}
-            delayLongPress={500}
+          <View
             style={[
               styles.container,
               { backgroundColor: theme.card, borderColor: theme.borderLight, shadowColor: theme.shadow },
               task.status === 'cerrada' && { opacity: 0.7, backgroundColor: theme.backgroundTertiary }
             ]}
-            activeOpacity={0.9}
           >
-            <View style={styles.row}>
-              {task.assignedTo && <Avatar name={task.assignedTo} size={36} style={styles.avatar} showBorder />}
-              <Text style={[styles.title, { color: theme.text }, task.status === 'cerrada' && styles.titleCompleted]} numberOfLines={2}>
-                {task.title}
-              </Text>
+            <View style={styles.contentRow}>
+              <TouchableOpacity 
+                onPress={() => { hapticMedium(); onPress && onPress(task); }} 
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                onLongPress={handleLongPress}
+                delayLongPress={500}
+                activeOpacity={0.9}
+                style={styles.taskContent}
+              >
+                <View style={styles.row}>
+                  {task.assignedTo && <Avatar name={task.assignedTo} size={isSmallDevice ? 32 : 36} style={styles.avatar} showBorder />}
+                  <Text style={[styles.title, { color: theme.text }, task.status === 'cerrada' && styles.titleCompleted]} numberOfLines={2}>
+                    {task.title}
+                  </Text>
+                  <View style={styles.badgeContainer} pointerEvents="none">
+                  {task.hasUnreadMessages && (
+                    <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
+                      <Ionicons name="chatbubble" size={10} color="#FFF" />
+                    </View>
+                  )}
+                  {remaining <= 0 && task.status !== 'cerrada' ? (
+                    <View style={styles.overdueBadgeContainer}>
+                      <Text style={styles.overdueBadge}>VENCIDA</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.badge, { backgroundColor: theme.info, color: '#FFF' }]}>
+                      {formatRemaining(remaining)}
+                    </Text>
+                  )}
+                  </View>
+                </View>
+              
+                <View style={styles.metaRow}>
+                  <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
+                    {task.area || 'Sin área'} • {task.assignedTo || 'Sin asignar'}
+                  </Text>
+                  <Text style={[styles.metaSmall, { color: theme.textTertiary }]}>{new Date(task.dueAt).toLocaleDateString()}</Text>
+                </View>
+                {task.priority && (
+                  <View style={styles.priorityRow}>
+                    <Text style={[styles.priorityBadge, { backgroundColor: priorityStyle.bg, color: priorityStyle.color }]}>
+                      {task.priority.toUpperCase()}
+                    </Text>
+                    <Text style={[styles.statusText, { color: theme.textTertiary }]} numberOfLines={1}>
+                      {task.status === 'en_progreso' ? 'En progreso' : task.status === 'en_revision' ? 'En revisión' : task.status === 'cerrada' ? 'Completada' : 'Pendiente'}
+                    </Text>
+                  </View>
+                )}
+              
+                {/* Botones de cambio de estado solo para operativos */}
+                {currentUserRole === 'operativo' && onChangeStatus && (
+                  <TaskStatusButtons 
+                    currentStatus={task.status} 
+                    onChangeStatus={onChangeStatus}
+                  />
+                )}
+              </TouchableOpacity>
+              
               {onDelete && (
                 <TouchableOpacity
                   onPress={() => {
                     hapticMedium();
-                    onDelete();
+                    setShowDeleteDialog(true);
                   }}
-                  style={styles.deleteButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={[styles.deleteButton, isSmallDevice && styles.deleteButtonSmall]}
+                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                  activeOpacity={0.5}
                 >
-                  <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                  <Ionicons name="trash-outline" size={isSmallDevice ? 18 : 22} color="#FF3B30" />
                 </TouchableOpacity>
               )}
-              <View style={styles.badgeContainer}>
-                {task.hasUnreadMessages && (
-                  <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
-                    <Ionicons name="chatbubble" size={10} color="#FFF" />
-                  </View>
-                )}
-                {remaining <= 0 && task.status !== 'cerrada' ? (
-                  <View style={styles.overdueBadgeContainer}>
-                    <Text style={styles.overdueBadge}>VENCIDA</Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.badge, { backgroundColor: theme.info, color: '#FFF' }]}>
-                    {formatRemaining(remaining)}
-                  </Text>
-                )}
-              </View>
             </View>
-            <View style={styles.metaRow}>
-              <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
-                {task.area || 'Sin área'} • {task.assignedTo || 'Sin asignar'}
-              </Text>
-              <Text style={[styles.metaSmall, { color: theme.textTertiary }]}>{new Date(task.dueAt).toLocaleDateString()}</Text>
-            </View>
-            {task.priority && (
-              <View style={styles.priorityRow}>
-                <Text style={[styles.priorityBadge, { backgroundColor: priorityStyle.bg, color: priorityStyle.color }]}>
-                  {task.priority.toUpperCase()}
-                </Text>
-                <Text style={[styles.statusText, { color: theme.textTertiary }]} numberOfLines={1}>
-                  {task.status === 'en_progreso' ? 'En progreso' : task.status === 'en_revision' ? 'En revisión' : task.status === 'cerrada' ? 'Completada' : 'Pendiente'}
-                </Text>
-              </View>
-            )}
-            
-            {/* Botones de cambio de estado solo para operativos */}
-            {currentUserRole === 'operativo' && onChangeStatus && (
-              <TaskStatusButtons 
-                currentStatus={task.status} 
-                onChangeStatus={onChangeStatus}
-              />
-            )}
-          </TouchableOpacity>
+          </View>
         </Animated.View>
       </Swipeable>
       <ContextMenu visible={showContextMenu} onClose={() => setShowContextMenu(false)} position={menuPosition} actions={menuActions} />
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Eliminar tarea"
+        message="¿Estás seguro de que quieres eliminar esta tarea?"
+        icon="trash"
+        iconColor="#FF3B30"
+        danger
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (onDelete) {
+            onDelete();
+          }
+          setShowDeleteDialog(false);
+        }}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </>
   );
 });
@@ -251,24 +281,24 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: { 
-    fontSize: 16, 
+    fontSize: 15, 
     fontWeight: '700', 
     flex: 1, 
     marginRight: 8,
     letterSpacing: -0.3,
-    lineHeight: 22,
+    lineHeight: 21,
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
     opacity: 0.6,
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 8,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    minWidth: 65,
+    minWidth: 60,
     textAlign: 'center',
     letterSpacing: -0.2
   },
@@ -282,13 +312,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     marginBottom: 6,
     alignItems: 'center',
-    gap: 6
+    gap: 6,
+    flexWrap: 'wrap',
   },
   meta: { 
     fontSize: 13, 
     fontWeight: '500',
     letterSpacing: 0.1,
     flex: 1,
+    minWidth: 120,
   },
   metaSmall: { 
     fontSize: 12,
@@ -297,7 +329,8 @@ const styles = StyleSheet.create({
   priorityRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 6
+    gap: 6,
+    flexWrap: 'wrap',
   },
   priorityBadge: { 
     fontSize: 10, 
@@ -374,10 +407,27 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  taskContent: {
+    flex: 1,
+  },
   deleteButton: {
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    minWidth: 38,
+    minHeight: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  deleteButtonSmall: {
     padding: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    marginLeft: 4
+    minWidth: 34,
+    minHeight: 34,
   },
 });
