@@ -167,14 +167,22 @@ export default function MyInboxScreen({ navigation }) {
     }
   }, [currentUser, tasks]);
 
-  // Filtrar tareas asignadas al usuario actual y ordenar por fecha
+  // Filtrar y ordenar tareas por fecha de vencimiento
+  // subscribeToTasks ya filtra según el rol (admin ve todo, jefe ve su depto, operativo ve solo sus tareas)
+  // Aquí solo ordenamos por fecha
   const filtered = tasks
     .filter(task => {
       // Si no hay usuario, no mostrar nada
       if (!currentUser) return false;
       
-      // Mostrar tareas asignadas al email del usuario
-      return task.assignedTo === currentUser.email;
+      // Si es operativo, mostrar solo sus tareas asignadas
+      if (currentUser.role === 'operativo') {
+        return task.assignedTo === currentUser.email;
+      }
+      
+      // Para admin y jefe, mostrar todas las tareas que ya fueron filtradas por subscribeToTasks
+      // (admin ve todo, jefe ve su departamento)
+      return true;
     })
     .sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
 
@@ -353,7 +361,11 @@ export default function MyInboxScreen({ navigation }) {
       <View style={styles.userSection}>
         <View style={styles.userLabelContainer}>
           <Ionicons name="person-outline" size={16} color="#9F2241" style={{ marginRight: 6 }} />
-          <Text style={styles.userLabel}>MIS TAREAS ASIGNADAS</Text>
+          <Text style={styles.userLabel}>
+            {currentUser?.role === 'admin' ? 'TODAS LAS TAREAS' : 
+             currentUser?.role === 'jefe' ? 'TAREAS DE MI ÁREA' : 
+             'MIS TAREAS ASIGNADAS'}
+          </Text>
         </View>
         <Text style={styles.currentUserName} numberOfLines={1} ellipsizeMode="tail">
           {currentUser?.displayName || 'Cargando...'}
