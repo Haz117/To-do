@@ -57,6 +57,17 @@ export default function KanbanScreen({ navigation }) {
   // Animaciones
   const headerSlide = useRef(new Animated.Value(-50)).current;
   const columnsSlide = useRef(new Animated.Value(100)).current;
+  
+  // Animaciones para cada columna (entrada escalonada)
+  const columnAnimations = useRef({
+    pendiente: new Animated.Value(0),
+    en_proceso: new Animated.Value(0),
+    en_revision: new Animated.Value(0),
+    cerrada: new Animated.Value(0)
+  }).current;
+  
+  // Animación del FAB
+  const fabScale = useRef(new Animated.Value(0)).current;
 
   // Detectar cambios de tamaño de pantalla
   useEffect(() => {
@@ -117,6 +128,26 @@ export default function KanbanScreen({ navigation }) {
         useNativeDriver: true,
       })
     ]).start();
+    
+    // Animar columnas con retraso escalonado
+    const delays = [300, 400, 500, 600];
+    STATUSES.forEach((status, index) => {
+      Animated.timing(columnAnimations[status.key], {
+        toValue: 1,
+        duration: 500,
+        delay: delays[index],
+        useNativeDriver: true,
+      }).start();
+    });
+    
+    // Animar FAB con entrada spring
+    Animated.spring(fabScale, {
+      toValue: 1,
+      delay: 700,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   // Suscribirse a cambios en tiempo real con debounce
@@ -410,8 +441,21 @@ export default function KanbanScreen({ navigation }) {
     // Calcular tareas de alta prioridad
     const highPriorityTasks = sorted.filter(task => task.priority === 'alta').length;
 
+    const columnAnimation = columnAnimations[status.key];
+    const animatedStyle = {
+      opacity: columnAnimation,
+      transform: [
+        {
+          translateY: columnAnimation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [50, 0]
+          })
+        }
+      ]
+    };
+
     return (
-      <View key={status.key} style={[styles.column, { backgroundColor: theme.surface }]}>
+      <Animated.View key={status.key} style={[styles.column, { backgroundColor: theme.surface }, animatedStyle]}>
         <View style={[styles.columnHeader, { backgroundColor: status.color + '20' }]}>
           <View style={styles.columnTitleContainer}>
             <View style={[styles.columnIconCircle, { backgroundColor: status.color }]}>
@@ -484,11 +528,17 @@ export default function KanbanScreen({ navigation }) {
             </View>
           )}
         />
-      </View>
+      </Animated.View>
     );
   };
 
   const styles = React.useMemo(() => createStyles(theme, isDark, columnWidth), [theme, isDark, columnWidth]);
+
+  // Estilo animado para FAB
+  const fabAnimatedStyle = {
+    transform: [{ scale: fabScale }],
+    opacity: fabScale,
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -697,15 +747,17 @@ export default function KanbanScreen({ navigation }) {
         )}
 
         {/* FAB para crear tarea */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.primary }]}
-          onPress={() => {
-            hapticMedium();
-            navigation.navigate('TaskDetail', { task: null });
-          }}
-        >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+        <Animated.View style={fabAnimatedStyle}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              hapticMedium();
+              navigation.navigate('TaskDetail', { task: null });
+            }}
+          >
+            <Ionicons name="add" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Menú contextual */}
         {contextMenu.visible && contextMenu.task && (

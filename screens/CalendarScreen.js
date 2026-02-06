@@ -31,6 +31,11 @@ export default function CalendarScreen({ navigation }) {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // Animaciones de entrada
+  const headerSlide = useRef(new Animated.Value(-50)).current;
+  const calendarSlide = useRef(new Animated.Value(100)).current;
+  const fabScale = useRef(new Animated.Value(0)).current;
 
   // Suscribirse a cambios en tiempo real
   useEffect(() => {
@@ -54,6 +59,34 @@ export default function CalendarScreen({ navigation }) {
         unsubscribe();
       }
     };
+  }, []);
+  
+  // Animar elementos de entrada
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(headerSlide, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.spring(calendarSlide, {
+        toValue: 0,
+        delay: 150,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
+    
+    // FAB con retraso
+    Animated.spring(fabScale, {
+      toValue: 1,
+      delay: 500,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   // Generar días del mes con memoización para mejor rendimiento
@@ -244,11 +277,29 @@ export default function CalendarScreen({ navigation }) {
 
   const selectedDateTasks = selectedDate ? getTasksForDate(selectedDate) : [];
   const styles = React.useMemo(() => createStyles(theme, isDark, isDesktop, isTablet, width, padding), [theme, isDark, isDesktop, isTablet, width, padding]);
+  
+  // Estilos animados
+  const headerAnimatedStyle = {
+    transform: [{ translateY: headerSlide }],
+  };
+  
+  const calendarAnimatedStyle = {
+    opacity: calendarSlide.interpolate({
+      inputRange: [0, 100],
+      outputRange: [1, 0]
+    }),
+    transform: [{ translateY: calendarSlide }],
+  };
+  
+  const fabAnimatedStyle = {
+    transform: [{ scale: fabScale }],
+    opacity: fabScale,
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.contentWrapper, { maxWidth: isDesktop ? MAX_WIDTHS.content : '100%' }]}>
-      <View style={[styles.headerGradient, { backgroundColor: isDark ? '#1A1A1A' : '#9F2241' }]}>
+      <Animated.View style={[styles.headerGradient, { backgroundColor: isDark ? '#1A1A1A' : '#9F2241' }, headerAnimatedStyle]}>
         <View style={styles.header}>
           <View>
             <View style={styles.greetingContainer}>
@@ -270,7 +321,7 @@ export default function CalendarScreen({ navigation }) {
             <Text style={styles.todayButtonText}>HOY</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Alerta de tareas vencidas */}
       <OverdueAlert 
@@ -281,7 +332,7 @@ export default function CalendarScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Controles de mes */}
-        <View style={styles.monthControls}>
+        <Animated.View style={[styles.monthControls, calendarAnimatedStyle]}>
           <TouchableOpacity 
             onPress={() => {
               hapticLight();
@@ -307,7 +358,7 @@ export default function CalendarScreen({ navigation }) {
           >
             <Ionicons name="chevron-forward" size={24} color={theme.primary} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Encabezado de días */}
         <View style={styles.weekHeader}>
