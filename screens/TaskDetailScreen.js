@@ -580,7 +580,7 @@ export default function TaskDetailScreen({ route, navigation }) {
             {/* Selector de Área */}
             <Text style={[styles.label, { marginTop: 24, marginBottom: 12 }]}>ÁREA *</Text>
             <View style={styles.areaGrid}>
-              {areas.map(a => {
+              {AREAS.map(a => {
                 const areaDep = areaToDepMap[a] || a.toLowerCase();
                 const canSelectArea = canEdit && (currentUser?.role === 'admin' || areaDep === currentUser?.department);
                 const areaColors = {

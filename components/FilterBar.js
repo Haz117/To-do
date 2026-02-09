@@ -135,7 +135,7 @@ const FilterBar = memo(function FilterBar({ onFilterChange }) {
             <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ÁREA</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.chipRow}>
-                {areas.map(area => (
+                {AREAS.map(area => (
                   <TouchableOpacity
                     key={area}
                     onPress={() => toggleArea(area)}
