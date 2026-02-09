@@ -49,14 +49,12 @@ export async function subscribeToTasks(callback) {
     // Construir query según el rol del usuario
     if (userRole === 'admin') {
       // Admin: Ver todas las tareas
-      console.log('✅ ADMIN - Mostrando todas las tareas');
       tasksQuery = query(
         collection(db, COLLECTION_NAME),
         orderBy('createdAt', 'desc')
       );
     } else if (userRole === 'jefe') {
       // Jefe: Solo tareas de su departamento/área
-      console.log('\ud83d\udcc1 JEFE - Filtrando por departamento:', userDepartment);
       tasksQuery = query(
         collection(db, COLLECTION_NAME),
         where('area', '==', userDepartment),
@@ -64,7 +62,6 @@ export async function subscribeToTasks(callback) {
       );
     } else if (userRole === 'operativo') {
       // Operativo: Solo tareas asignadas a él (comparación exacta con email)
-      console.log('🔒 Filtro OPERATIVO - Email:', userEmail);
       tasksQuery = query(
         collection(db, COLLECTION_NAME),
         where('assignedTo', '==', userEmail),
@@ -72,7 +69,6 @@ export async function subscribeToTasks(callback) {
       );
     } else {
       // Sin rol definido: sin acceso
-      console.warn('Usuario sin rol definido');
       callback([]);
       return () => {};
     }
@@ -137,17 +133,15 @@ export async function createTask(task) {
     };
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), taskData);
-    console.log('[Firebase] Tarea creada:', docRef.id);
     
     // Enviar notificación por email al asignado
     if (task.assignedTo) {
       notifyTaskAssigned({...task, id: docRef.id}, task.assignedTo)
-        .catch(err => console.warn('Error enviando email:', err));
+        .catch(err => {});
     }
     
     return docRef.id;
   } catch (error) {
-    console.error('[Firebase] Error creando tarea:', error);
     
     // Lanzar error con mensaje específico
     if (error.code === 'permission-denied') {
@@ -182,9 +176,8 @@ export async function updateTask(taskId, updates) {
     }
 
     await updateDoc(taskRef, updateData);
-    console.log('[Firebase] Tarea actualizada:', taskId);
+
   } catch (error) {
-    console.error('[Firebase] Error actualizando tarea:', error);
     
     // Lanzar error con mensaje específico
     if (error.code === 'permission-denied') {
@@ -208,9 +201,7 @@ export async function deleteTask(taskId) {
   try {
     const taskRef = doc(db, COLLECTION_NAME, taskId);
     await deleteDoc(taskRef);
-    console.log('[Firebase] Tarea eliminada:', taskId);
   } catch (error) {
-    console.error('[Firebase] Error eliminando tarea:', error);
     
     // Lanzar error con mensaje específico
     if (error.code === 'permission-denied') {
@@ -230,6 +221,5 @@ export async function deleteTask(taskId) {
  * @returns {Promise<Array>} Array de tareas
  */
 export async function loadTasks() {
-  console.warn('loadTasks: Usa subscribeToTasks para tiempo real');
   return [];
 }

@@ -100,7 +100,6 @@ export default function DashboardScreen({ navigation }) {
         loadAdvancedMetrics(session.session.email);
       }
     } catch (error) {
-      console.error('Error cargando datos:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -122,7 +121,6 @@ export default function DashboardScreen({ navigation }) {
       setEstimatedVsReal(estimated);
       setPomodoroStats(pomodoro);
     } catch (error) {
-      console.error('Error cargando métricas avanzadas:', error);
     } finally {
       setLoadingAdvanced(false);
     }
@@ -231,13 +229,6 @@ export default function DashboardScreen({ navigation }) {
       t.dueAt < Date.now() && 
       (t.status !== 'cerrada')
     ).sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
-    
-    console.log('[DashboardScreen] getOverdueTasks:', {
-      totalTareas: tasks.length,
-      tareasVencidas: result.length,
-      rol: currentUser?.role,
-      email: currentUser?.email
-    });
     
     return result;
   };
@@ -669,7 +660,6 @@ export default function DashboardScreen({ navigation }) {
         {/* Información de Áreas (Admin) - Colapsable */}
         {currentUser?.role === 'admin' && (
           <>
-            {console.log('[DashboardScreen] Renderizando "Tareas por Área" - Admin detectado')}
             <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
               
               {/* Header Colapsable */}
@@ -841,7 +831,6 @@ export default function DashboardScreen({ navigation }) {
         {/* Heatmap de Actividad */}
         {!loadingAdvanced && heatmapData.length > 0 && (
           <>
-            {console.log('[DashboardScreen] Renderizando Heatmap', { dataLength: heatmapData.length, loading: loadingAdvanced })}
             <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
               <View style={styles.chartHeader}>
                 <Ionicons name="calendar" size={20} color={theme.text} />
@@ -855,7 +844,6 @@ export default function DashboardScreen({ navigation }) {
         {/* Estadísticas Pomodoro */}
         {pomodoroStats && (
           <>
-            {console.log('[DashboardScreen] Renderizando Pomodoro', { stats: pomodoroStats })}
             <View style={[styles.chartCard, { backgroundColor: theme.background }]}>
             <View style={styles.chartHeader}>
               <Ionicons name="timer" size={20} color={theme.text} />

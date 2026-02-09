@@ -38,7 +38,6 @@ export const getUserProfile = async (userId = null) => {
     }
     return null;
   } catch (error) {
-    console.error('Error obteniendo perfil:', error);
     return null;
   }
 };
@@ -58,7 +57,6 @@ export const createUserProfile = async (userId, data) => {
     await setDoc(doc(db, 'users', userId), userProfile);
     return userProfile;
   } catch (error) {
-    console.error('Error creando perfil:', error);
     throw error;
   }
 };
@@ -73,7 +71,6 @@ export const updateUserProfile = async (userId, updates) => {
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error actualizando perfil:', error);
     throw error;
   }
 };
@@ -91,7 +88,6 @@ export const updateUserRole = async (userId, newRole) => {
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error actualizando rol:', error);
     throw error;
   }
 };
@@ -180,7 +176,6 @@ export const deactivateUser = async (userId) => {
       deactivatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error desactivando usuario:', error);
     throw error;
   }
 };
@@ -195,7 +190,6 @@ export const getAllUsersNames = async () => {
       .filter(email => email) // Filtrar nulls/undefined
       .sort();
   } catch (error) {
-    console.error('Error obteniendo emails de usuarios:', error);
     return [];
   }
 };

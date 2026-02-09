@@ -50,10 +50,8 @@ export async function createSignature(taskId, signatureData = {}) {
     };
 
     const docRef = await addDoc(collection(db, 'signatures'), signature);
-    console.log('[Signatures] Firma digital registrada:', docRef.id);
     return docRef.id;
   } catch (error) {
-    console.error('[Signatures] Error registrando firma:', error);
     throw error;
   }
 }
@@ -82,7 +80,6 @@ export async function getSignature(taskId) {
       signedAt: doc.data().signedAt?.toDate?.() || new Date()
     };
   } catch (error) {
-    console.error('Error obteniendo firma:', error);
     return null;
   }
 }
@@ -109,7 +106,6 @@ export async function getUserSignatures(userId = null) {
       signedAt: doc.data().signedAt?.toDate?.() || new Date()
     }));
   } catch (error) {
-    console.error('Error obteniendo firmas del usuario:', error);
     return [];
   }
 }
@@ -131,7 +127,6 @@ export async function verifySignature(signatureId) {
     const snapshot = await getDocs(q);
     return !snapshot.empty && snapshot.docs[0].data().verified === true;
   } catch (error) {
-    console.error('Error verificando firma:', error);
     return false;
   }
 }
@@ -156,9 +151,7 @@ export async function createAuditLog(action, details) {
     };
 
     await addDoc(collection(db, 'auditLogs'), log);
-    console.log('📝 Log de auditoría creado:', action);
   } catch (error) {
-    console.error('Error creando log de auditoría:', error);
     // No lanzar error para no bloquear operaciones principales
   }
 }
