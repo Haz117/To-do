@@ -214,8 +214,9 @@ const TaskItem = memo(function TaskItem({
                 {/* Botones de cambio de estado solo para operativos */}
                 {currentUserRole === 'operativo' && onChangeStatus && (
                   <TaskStatusButtons 
-                    currentStatus={task.status} 
-                    onChangeStatus={onChangeStatus}
+                    currentStatus={task.status}
+                    taskId={task.id}
+                    onStatusChange={onChangeStatus}
                   />
                 )}
               </TouchableOpacity>
