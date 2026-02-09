@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Animated, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ensurePermissions, getAllScheduledNotifications, cancelAllNotifications } from '../services/notifications';
-import { generateTaskReport, generateMonthlyReport } from '../services/reports';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import * as Notifications from 'expo-notifications';
@@ -276,47 +275,7 @@ export default function AdminScreen({ navigation, onLogout }) {
     );
   };
 
-  const exportReport = async () => {
-    Alert.alert(
-      'Exportar Reporte',
-      'Selecciona el tipo de reporte',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel'
-        },
-        {
-          text: 'Todas las Tareas (CSV)',
-          onPress: async () => {
-            try {
-              const result = await generateTaskReport();
-              Alert.alert(
-                'Reporte Generado', 
-                `El archivo CSV ha sido generado exitosamente.${Platform.OS === 'web' ? '\n\nEl archivo se descargó automáticamente.' : '\n\nEl archivo se compartió exitosamente.'}`
-              );
-            } catch (error) {
-              Alert.alert(
-                'Error al Exportar', 
-                `No se pudo generar el reporte: ${error.message}\n\nPor favor verifica que haya tareas en el sistema.`
-              );
-            }
-          }
-        },
-        {
-          text: 'Estadísticas Mensuales',
-          onPress: async () => {
-            const now = new Date();
-            try {
-              await generateMonthlyReport(now.getFullYear(), now.getMonth() + 1);
-              Alert.alert('Reporte Generado', 'Las estadísticas han sido exportadas');
-            } catch (error) {
-              Alert.alert('Error', error.message);
-            }
-          }
-        }
-      ]
-    );
-  };
+
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -767,32 +726,6 @@ export default function AdminScreen({ navigation, onLogout }) {
           </TouchableOpacity>
         </View>
 
-        {/* Reportes */}
-        <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.iconCircleSection, { backgroundColor: '#8B5CF6' }]}>
-              <Ionicons name="bar-chart" size={24} color="#FFFFFF" />
-            </View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Reportes</Text>
-          </View>
-
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => {
-              hapticMedium();
-              exportReport();
-            }}
-          >
-            <View style={[styles.buttonGradient, { backgroundColor: '#007AFF' }]}>
-              <Ionicons name="document-text" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.buttonText}>Exportar Reporte</Text>
-            </View>
-          </TouchableOpacity>
-
-          <Text style={[styles.helpText, { color: theme.textSecondary }]}>
-            Los reportes se exportan en formato CSV (compatible con Excel).
-          </Text>
-        </View>
 
         {/* Información de la App */}
         <View style={[styles.sectionCard, { backgroundColor: theme.card }]}>
