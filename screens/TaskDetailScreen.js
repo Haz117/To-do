@@ -16,6 +16,7 @@ import TagInput from '../components/TagInput';
 import { useTheme } from '../contexts/ThemeContext';
 import { savePomodoroSession } from '../services/pomodoro';
 import { AREAS } from '../config/areas';
+import { getAreaType } from '../config/areas';
 
 // Importar DateTimePicker solo en móvil
 let DateTimePicker;
@@ -647,34 +648,57 @@ export default function TaskDetailScreen({ route, navigation }) {
                 {/* Area List */}
                 <ScrollView style={styles.userList} showsVerticalScrollIndicator={false}>
                   {filteredAreas.length > 0 ? (
-                    filteredAreas.map((a) => (
-                      <TouchableOpacity
-                        key={a}
-                        onPress={() => {
-                          handleAreaChange(a);
-                          setShowAreaModal(false);
-                          setAreaSearchQuery('');
-                        }}
-                        style={[
-                          styles.userListItem,
-                          area === a && [
-                            styles.userListItemActive,
-                            { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }
-                          ],
-                          { borderBottomColor: theme.border }
-                        ]}
-                      >
-                        <View style={[styles.userAvatar, area === a && { backgroundColor: theme.primary }]}>
-                          <Ionicons name="folder" size={18} color={area === a ? '#FFFFFF' : theme.primary} />
-                        </View>
-                        <Text style={[styles.userName, { color: theme.text, flex: 1 }]}>
-                          {a}
-                        </Text>
-                        {area === a && (
-                          <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
-                        )}
-                      </TouchableOpacity>
-                    ))
+                    filteredAreas.map((a) => {
+                      const areaType = getAreaType(a);
+                      const isSecretaria = areaType === 'secretaria';
+                      const iconColor = isSecretaria ? '#9F2241' : '#0EA5E9';
+                      const bgColor = isSecretaria ? '#9F224115' : '#0EA5E915';
+                      const borderColor = isSecretaria ? '#9F2241' : '#0EA5E9';
+                      const icon = isSecretaria ? 'briefcase' : 'folder-outline';
+                      const badgeText = isSecretaria ? 'Secretaría' : 'Dirección';
+                      const badgeBg = isSecretaria ? '#9F2241' : '#0EA5E9';
+                      
+                      return (
+                        <TouchableOpacity
+                          key={a}
+                          onPress={() => {
+                            handleAreaChange(a);
+                            setShowAreaModal(false);
+                            setAreaSearchQuery('');
+                          }}
+                          style={[
+                            styles.areaListItem,
+                            area === a && [
+                              styles.areaListItemActive,
+                              { backgroundColor: `${borderColor}20`, borderColor: borderColor, borderWidth: 2 }
+                            ],
+                            !area === a && { borderBottomColor: theme.border },
+                            { backgroundColor: area === a ? `${borderColor}20` : bgColor }
+                          ]}
+                        >
+                          <View style={[styles.areaListIcon, { backgroundColor: `${iconColor}25` }]}>
+                            <Ionicons name={icon} size={20} color={iconColor} />
+                          </View>
+                          
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <Text style={[styles.areaListName, { color: theme.text, flex: 1 }]}>
+                                {a}
+                              </Text>
+                              <View style={[styles.areaTypeBadge, { backgroundColor: badgeBg }]}>
+                                <Text style={styles.areaTypeBadgeText}>
+                                  {badgeText}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          
+                          {area === a && (
+                            <Ionicons name="checkmark-circle" size={24} color={borderColor} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
                   ) : (
                     <View style={styles.emptyState}>
                       <Ionicons name="search" size={40} color={theme.textSecondary} style={{ marginBottom: 12 }} />
@@ -2002,5 +2026,44 @@ const createStyles = (theme, isDark) => StyleSheet.create({
   areaButtonValue: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  // Estilos para el listado de áreas mejorado
+  areaListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderRadius: 12,
+    marginHorizontal: 8,
+    marginVertical: 4,
+  },
+  areaListItemActive: {
+    borderRadius: 12,
+  },
+  areaListIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  areaListName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  areaTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  areaTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
