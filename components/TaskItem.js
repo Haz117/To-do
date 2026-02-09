@@ -217,9 +217,7 @@ const TaskItem = memo(function TaskItem({
                 </View>
                 {task.priority && (
                   <View style={styles.priorityRow}>
-                    <Text style={[styles.priorityBadge, { backgroundColor: priorityStyle.bg, color: priorityStyle.color }]}>
-                      {task.priority.toUpperCase()}
-                    </Text>
+
                     <Text style={[styles.statusText, { color: theme.textTertiary }]} numberOfLines={1}>
                       {task.status === 'en_progreso' ? 'En progreso' : task.status === 'en_revision' ? 'En revisión' : task.status === 'cerrada' ? 'Completada' : 'Pendiente'}
                     </Text>
