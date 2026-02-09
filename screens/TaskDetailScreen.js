@@ -58,6 +58,10 @@ export default function TaskDetailScreen({ route, navigation }) {
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
   const [assigneeSearchQuery, setAssigneeSearchQuery] = useState('');
   
+  // Modal de selección de área
+  const [showAreaModal, setShowAreaModal] = useState(false);
+  const [areaSearchQuery, setAreaSearchQuery] = useState('');
+  
   // Toast state
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -114,6 +118,12 @@ export default function TaskDetailScreen({ route, navigation }) {
       person.split('@')[0].toLowerCase().includes(query)
     );
   }, [peopleNames, assigneeSearchQuery]);
+
+  const filteredAreas = useMemo(() => {
+    if (!areaSearchQuery.trim()) return AREAS;
+    const query = areaSearchQuery.toLowerCase();
+    return AREAS.filter(area => area.toLowerCase().includes(query));
+  }, [areaSearchQuery]);
 
   useEffect(() => {
     navigation.setOptions({ 
@@ -577,51 +587,106 @@ export default function TaskDetailScreen({ route, navigation }) {
               </View>
             </TouchableOpacity>
 
-            {/* Selector de Área */}
+            {/* Selector de Área - Botón Modal */}
             <Text style={[styles.label, { marginTop: 24, marginBottom: 12 }]}>ÁREA *</Text>
-            <View style={styles.areaGrid}>
-              {AREAS.map(a => {
-                const areaDep = areaToDepMap[a] || a.toLowerCase();
-                const canSelectArea = canEdit && (currentUser?.role === 'admin' || areaDep === currentUser?.department);
-                const areaColors = {
-                  'Jurídica': '#8B5CF6',
-                  'Obras': '#F59E0B',
-                  'Tesorería': '#10B981',
-                  'Administración': '#3B82F6',
-                  'Recursos Humanos': '#EC4899'
-                };
-                const areaIcons = {
-                  'Jurídica': 'scale',
-                  'Obras': 'construct',
-                  'Tesorería': 'calculator',
-                  'Administración': 'briefcase',
-                  'Recursos Humanos': 'people'
-                };
-                const color = areaColors[a] || '#9F2241';
-                const icon = areaIcons[a] || 'folder';
-                
-                return (
-                  <TouchableOpacity
-                    key={a}
-                    onPress={() => handleAreaChange(a)}
-                    style={[
-                      styles.areaCard, 
-                      area === a && [styles.areaCardActive, { borderColor: color, backgroundColor: `${color}15` }],
-                      !canSelectArea && styles.optionBtnDisabled
-                    ]}
-                    disabled={!canSelectArea}
-                  >
-                    <View style={[styles.areaIconBg, { backgroundColor: `${color}25` }]}>
-                      <Ionicons name={icon} size={24} color={color} />
-                    </View>
-                    <Text style={[styles.areaName, area === a && { color: color, fontWeight: '700' }]}>
-                      {a}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={[styles.areaButton, { borderColor: theme.primary, backgroundColor: isDark ? `${theme.primary}15` : `${theme.primary}10` }]}
+              onPress={() => setShowAreaModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.areaButtonIcon, { backgroundColor: theme.primary }]}>
+                <Ionicons name="folder" size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.areaButtonInfo}>
+                <Text style={[styles.areaButtonLabel, { color: theme.textSecondary }]}>
+                  Seleccionar área
+                </Text>
+                <Text style={[styles.areaButtonValue, { color: theme.text }]}>
+                  {area || 'Sin área'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.primary} />
+            </TouchableOpacity>
           </View>
+
+          {/* Modal de Selección de Área */}
+          <Modal
+            visible={showAreaModal}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowAreaModal(false)}
+          >
+            <View style={[styles.modalContainer, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)' }]}>
+              <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                {/* Modal Header */}
+                <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Seleccionar área</Text>
+                  <TouchableOpacity onPress={() => setShowAreaModal(false)}>
+                    <Ionicons name="close" size={24} color={theme.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Search Box */}
+                <View style={[styles.searchBox, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+                  <Ionicons name="search" size={18} color={theme.textSecondary} />
+                  <TextInput
+                    placeholder="Buscar área..."
+                    placeholderTextColor={theme.textSecondary}
+                    style={[styles.searchInput, { color: theme.text }]}
+                    value={areaSearchQuery}
+                    onChangeText={setAreaSearchQuery}
+                    autoFocus
+                  />
+                  {areaSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setAreaSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Area List */}
+                <ScrollView style={styles.userList} showsVerticalScrollIndicator={false}>
+                  {filteredAreas.length > 0 ? (
+                    filteredAreas.map((a) => (
+                      <TouchableOpacity
+                        key={a}
+                        onPress={() => {
+                          handleAreaChange(a);
+                          setShowAreaModal(false);
+                          setAreaSearchQuery('');
+                        }}
+                        style={[
+                          styles.userListItem,
+                          area === a && [
+                            styles.userListItemActive,
+                            { backgroundColor: `${theme.primary}15`, borderColor: theme.primary }
+                          ],
+                          { borderBottomColor: theme.border }
+                        ]}
+                      >
+                        <View style={[styles.userAvatar, area === a && { backgroundColor: theme.primary }]}>
+                          <Ionicons name="folder" size={18} color={area === a ? '#FFFFFF' : theme.primary} />
+                        </View>
+                        <Text style={[styles.userName, { color: theme.text, flex: 1 }]}>
+                          {a}
+                        </Text>
+                        {area === a && (
+                          <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Ionicons name="search" size={40} color={theme.textSecondary} style={{ marginBottom: 12 }} />
+                      <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
+                        No se encontraron áreas
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
 
           {/* Modal de Selección de Usuario */}
           <Modal
@@ -1907,5 +1972,35 @@ const createStyles = (theme, isDark) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  // Estilos para el botón de área modal
+  areaButton: {
+    borderRadius: 14,
+    borderWidth: 2,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  areaButtonIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  areaButtonInfo: {
+    flex: 1,
+  },
+  areaButtonLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  areaButtonValue: {
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
