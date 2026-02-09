@@ -824,16 +824,16 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     width: '100%'
   },
   headerGradient: {
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
     shadowColor: theme.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
     elevation: 14,
     paddingHorizontal: padding,
-    paddingTop: isDesktop ? SPACING.xxxl : 48,
-    paddingBottom: 24
+    paddingTop: isDesktop ? SPACING.xxxl : 52,
+    paddingBottom: 28
   },
   header: {
     flexDirection: 'row',
@@ -846,33 +846,48 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     marginBottom: 12
   },
   greeting: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#FFFFFF',
     opacity: 0.95,
-    letterSpacing: 0.3
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   heading: { 
-    fontSize: 36, 
+    fontSize: 44, 
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -2
+    letterSpacing: -2.2,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4
   },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+    backgroundColor: 'rgba(255, 59, 48, 0.95)',
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.lg,
     gap: SPACING.xs,
-    marginRight: SPACING.sm,
-    ...SHADOWS.sm
+    marginRight: SPACING.md,
+    ...SHADOWS.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4
   },
   urgentBadgeText: {
     color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase'
   },
   urgentAlert: {
     marginHorizontal: padding,
@@ -907,13 +922,18 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     elevation: 12
   },
   addButtonGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.9)'
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6
   },
   listContent: {
     padding: padding,
@@ -926,18 +946,22 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     paddingHorizontal: padding * 2
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '900',
     color: theme.text,
-    marginBottom: 8,
-    letterSpacing: -0.6
+    marginBottom: 12,
+    letterSpacing: -0.8,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   emptySubtext: {
     fontSize: 16,
     color: theme.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '500'
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: -0.2
   },
   // Bento Grid Styles
   bentoGrid: {
@@ -954,7 +978,14 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     ...SHADOWS.lg,
-    width: isDesktop ? (screenWidth > 1440 ? '23%' : '32%') : isTablet ? '48%' : '100%'
+    width: isDesktop ? (screenWidth > 1440 ? '23%' : '32%') : isTablet ? '48%' : '100%',
+    shadowColor: isDark ? theme.primary : '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.2 : 0.15,
+    shadowRadius: 14,
+    elevation: 5,
+    borderWidth: 1.5,
+    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
   },
   bentoLarge: {
     flex: 2,
@@ -973,8 +1004,13 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     backgroundColor: theme.card,
     borderWidth: 2,
     borderColor: theme.border,
-    padding: 14,
-    minHeight: 90
+    padding: 16,
+    minHeight: 100,
+    shadowColor: isDark ? theme.primary : '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: isDark ? 0.15 : 0.1,
+    shadowRadius: 10,
+    elevation: 3
   },
   bentoGradient: {
     flex: 1,
@@ -1014,52 +1050,52 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     justifyContent: 'flex-end'
   },
   bentoTitleLarge: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    letterSpacing: 0.6,
+    marginBottom: 10,
     textTransform: 'uppercase',
     textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3
   },
   bentoTitleSmall: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    letterSpacing: 0.6,
+    marginBottom: 10,
     textTransform: 'uppercase',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2
   },
   bentoNumberLarge: {
-    fontSize: 64,
+    fontSize: 72,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -3,
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.35)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6
+    letterSpacing: -3.2,
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 8
   },
   bentoNumberMedium: {
-    fontSize: 52,
+    fontSize: 58,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -2.5,
-    textShadowColor: 'rgba(0,0,0,0.35)',
+    letterSpacing: -2.8,
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6
   },
   bentoNumberSmall: {
-    fontSize: 40,
+    fontSize: 44,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -2,
-    textShadowColor: 'rgba(0,0,0,0.35)',
+    letterSpacing: -2.2,
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6
   },
@@ -1108,25 +1144,25 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.card,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    gap: 12,
     borderWidth: 2,
     borderColor: theme.border,
     shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
     maxWidth: '100%',
     flexShrink: 1
   },
   areaName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: theme.text,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     flex: 1,
     flexShrink: 1
   },
@@ -1144,25 +1180,28 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     color: '#FFFFFF'
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     color: theme.text,
-    letterSpacing: -0.8,
-    marginBottom: 16,
-    marginTop: 12
+    letterSpacing: -0.9,
+    marginBottom: 20,
+    marginTop: 16,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 90,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    right: 24,
+    bottom: 104,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10
   },
   fabGradient: {
     width: '100%',
@@ -1194,9 +1233,13 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     borderBottomColor: 'rgba(255, 59, 48, 0.2)'
   },
   urgentModalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 4
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 6,
+    letterSpacing: -0.6,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   urgentModalSubtitle: {
     fontSize: 14,
@@ -1247,13 +1290,20 @@ const createStyles = (theme, isDark, isDesktop, isTablet, screenWidth, padding, 
     borderTopColor: 'rgba(0, 0, 0, 0.1)'
   },
   urgentModalButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center'
+    paddingVertical: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4
   },
   urgentModalButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700'
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase'
   }
 });
