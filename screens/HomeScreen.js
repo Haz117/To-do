@@ -155,15 +155,10 @@ export default function HomeScreen({ navigation }) {
   }, [currentUser, navigation]);
 
   const openDetail = useCallback((task) => {
-    // Solo admin y jefe pueden editar tareas
-    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'jefe')) {
-      navigation.navigate('TaskDetail', { task });
-    } else {
-      setToastMessage('Solo administradores y jefes pueden editar tareas');
-      setToastType('info');
-      setToastVisible(true);
-    }
-  }, [currentUser, navigation]);
+    // Todos pueden ver los detalles de las tareas
+    // Admin/Jefe pueden editar, operativos ven solo el modal
+    navigation.navigate('TaskDetail', { task });
+  }, [navigation]);
 
   const openChat = useCallback((task) => {
     navigation.navigate('TaskChat', { taskId: task.id, taskTitle: task.title });
