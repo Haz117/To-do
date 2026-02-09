@@ -505,7 +505,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Alerta de tareas vencidas */}
+        {/* Alerta de tareas urgentes dejada en el modal - comentada la alerta de tareas vencidas
         <OverdueAlert 
           tasks={tasks} 
           currentUserEmail={currentUser?.email}
@@ -514,6 +514,7 @@ export default function HomeScreen({ navigation }) {
             navigation.navigate('TaskDetail', { task });
           }}
         />
+        */}
 
         {/* Modal de Tareas Urgentes */}
         <Modal
@@ -665,7 +666,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
             
-            {/* Fila 1: Estadísticas principales */}
+            {/* Fila 1: Estadísticas principales - REMOVIDA para reducir alertas
             <View style={styles.bentoRow}>
               <View style={[styles.bentoCard, styles.bentoLarge]}>
                 <View style={[styles.bentoGradient, { backgroundColor: theme.primary }]}>
@@ -695,6 +696,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </View>
             </View>
+            */}
 
             <Text style={styles.sectionTitle}>Todas las Tareas</Text>
           </View>
