@@ -909,56 +909,63 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   content: {
-    padding: 12,
+    padding: 16,
     paddingBottom: 80
   },
   statsContainer: {
     flexDirection: 'row',
-    marginBottom: 14,
-    gap: 10
+    marginBottom: 24,
+    gap: 12
   },
   statCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 20,
+    padding: 20,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 110,
+    minHeight: 135,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)'
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden'
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: '900',
     color: '#FFFFFF',
-    marginTop: 8,
-    marginBottom: 4,
-    letterSpacing: -0.5
+    marginTop: 10,
+    marginBottom: 6,
+    letterSpacing: -0.8,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
     color: '#FFFFFF',
-    opacity: 0.95,
+    opacity: 0.98,
     textTransform: 'uppercase',
-    letterSpacing: 0.6
+    letterSpacing: 0.8,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   sectionCard: {
-    padding: 16,
+    padding: 18,
     borderRadius: 20,
-    marginBottom: 16,
+    marginBottom: 24,
     borderWidth: 1.5,
     borderColor: 'rgba(0,0,0,0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -967,38 +974,42 @@ const styles = StyleSheet.create({
     gap: 12
   },
   iconCircleSection: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)'
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)'
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '900',
-    letterSpacing: -0.5,
-    flex: 1
+    letterSpacing: -0.6,
+    flex: 1,
+    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
-    marginBottom: 14,
+    marginBottom: 16,
     paddingHorizontal: 16,
-    borderWidth: 1.5,
+    borderWidth: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    minHeight: 48
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+    minHeight: 52,
+    backgroundColor: 'rgba(255,255,255,0.08)'
   },
   inputIcon: {
     marginRight: 12
@@ -1020,38 +1031,45 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 2,
-    minHeight: 48
+    borderRadius: 14,
+    borderWidth: 2.5,
+    minHeight: 52,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4
   },
   roleButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.2
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
   },
   actionButton: {
-    marginBottom: 14,
+    marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4
   },
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    padding: 16,
     borderRadius: 14,
-    minHeight: 48
+    minHeight: 52
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase'
   },
   expandButton: {
     flexDirection: 'row',
@@ -1078,17 +1096,17 @@ const styles = StyleSheet.create({
   },
   userCard: {
     flexDirection: 'row',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1.5,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
     alignItems: 'center',
-    minHeight: 80
+    minHeight: 90
   },
   userInfo: {
     flex: 1,
@@ -1101,11 +1119,18 @@ const styles = StyleSheet.create({
     gap: 10
   },
   userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2
   },
   userName: {
     fontSize: 16,
