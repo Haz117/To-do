@@ -584,22 +584,24 @@ export default function AdminScreen({ navigation, onLogout }) {
                           color="#FFFFFF"
                         />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.userName, { color: theme.text }]}>{user.displayName}</Text>
-                        <Text style={[styles.userEmail, { color: theme.textSecondary }]}>{user.email}</Text>
+                      <View style={styles.userTextContainer}>
+                        <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1} ellipsizeMode="tail">{user.displayName}</Text>
+                        <Text style={[styles.userEmail, { color: theme.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{user.email}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.userFooter}>
+                      <View style={styles.userDateRow}>
+                        <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
+                        <Text style={[styles.userDate, { color: theme.textSecondary }]}>
+                          {user.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}
+                        </Text>
                       </View>
                       <View style={[
                         styles.userRoleBadge, 
                         { backgroundColor: user.role === 'admin' ? '#DC2626' : '#3B82F6' }
                       ]}>
-                        <Text style={styles.userRoleText}>{user.role}</Text>
+                        <Text style={styles.userRoleText}>{user.role.toUpperCase()}</Text>
                       </View>
-                    </View>
-                    <View style={styles.userDateRow}>
-                      <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
-                      <Text style={[styles.userDate, { color: theme.textSecondary }]}>
-                        {user.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}
-                      </Text>
                     </View>
                   </View>
                   <TouchableOpacity
@@ -1030,7 +1032,7 @@ const styles = StyleSheet.create({
   userCard: {
     flexDirection: 'row',
     borderRadius: 18,
-    padding: 16,
+    padding: Platform.OS === 'web' ? 16 : 12,
     marginBottom: 14,
     borderWidth: 2,
     shadowColor: '#000',
@@ -1039,22 +1041,27 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
     alignItems: 'center',
-    minHeight: 90
+    minHeight: Platform.OS === 'web' ? 90 : 85,
+    gap: 10
   },
   userInfo: {
-    flex: 1,
-    marginRight: 12
+    flex: 1
   },
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 10
+    marginBottom: 10,
+    gap: 10,
+    flex: 1
+  },
+  userTextContainer: {
+    flex: 1,
+    minWidth: 0
   },
   userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: Platform.OS === 'web' ? 48 : 44,
+    height: Platform.OS === 'web' ? 48 : 44,
+    borderRadius: Platform.OS === 'web' ? 24 : 22,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -1063,32 +1070,39 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 2
+    elevation: 2,
+    flexShrink: 0
   },
   userName: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 15 : 14,
     fontWeight: '800',
-    flex: 1,
-    letterSpacing: -0.3
+    letterSpacing: -0.3,
+    marginBottom: 2
   },
   userRoleBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 10,
+    paddingVertical: Platform.OS === 'web' ? 6 : 5,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)'
+    borderColor: 'rgba(255,255,255,0.3)',
+    flexShrink: 0
   },
   userRoleText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 12 : 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 0.6
+    letterSpacing: 0.5
   },
   userEmail: {
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: Platform.OS === 'web' ? 13 : 12,
     fontWeight: '600'
+  },
+  userFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8
   },
   userDateRow: {
     flexDirection: 'row',
@@ -1101,14 +1115,15 @@ const styles = StyleSheet.create({
   },
   statusButton: {
     backgroundColor: '#22C55E',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 12,
+    paddingVertical: Platform.OS === 'web' ? 10 : 8,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
-    minHeight: 44,
+    minHeight: Platform.OS === 'web' ? 44 : 40,
+    flexShrink: 0,
     shadowColor: '#22C55E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
