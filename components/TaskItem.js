@@ -147,7 +147,21 @@ const TaskItem = memo(function TaskItem({
     }
   };
 
+  const getDueStatus = () => {
+    const due = new Date(task.dueAt).getTime();
+    const remaining = due - now;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    if (remaining <= 0) {
+      return { leftBorderColor: '#FF3B30', status: 'vencida' }; // Rojo - Vencida
+    } else if (remaining <= oneDayMs) {
+      return { leftBorderColor: '#FFC107', status: 'proxima' }; // Amarillo - Próxima a vencer
+    }
+    return { leftBorderColor: 'transparent', status: 'normal' };
+  };
+
   const priorityStyle = getPriorityStyle();
+  const dueStatus = getDueStatus();
 
   return (
     <>
@@ -156,7 +170,13 @@ const TaskItem = memo(function TaskItem({
           <View
             style={[
               styles.container,
-              { backgroundColor: theme.card, borderColor: theme.borderLight, shadowColor: theme.shadow },
+              { 
+                backgroundColor: theme.card, 
+                borderColor: theme.borderLight, 
+                shadowColor: theme.shadow,
+                borderLeftColor: dueStatus.leftBorderColor,
+                borderLeftWidth: 4
+              },
               task.status === 'cerrada' && { opacity: 0.7, backgroundColor: theme.backgroundTertiary }
             ]}
           >
